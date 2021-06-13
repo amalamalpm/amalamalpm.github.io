@@ -1,0 +1,601 @@
+<html lang="en_IN">
+<head>
+  <title>Cowin Check Availability Alarm</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="icon" content="32.png">
+  <meta name="description" content="Check schedules for Cowin vaccination and free alerts in India">
+  <meta name="keywords" content="cowin, vaccination, india, covid19india, schedule">
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-P78MSSBKKF"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-P78MSSBKKF');
+  </script>
+</head>
+<body>
+<div class="header2"><img class="menu1" src="128.png" height="40px" width="40px" alt="Cowin19.GA"><div class="menu1">Cowin Schedule Checker</div><div class="menu"><a class="headerlink" href="https://forms.gle/PQntwjJDiUc6Q7mG8" target="_blank">Feedback</a></div></div>
+<h1>Check your nearest vaccination center and slots availability</h1>
+<div class="tab" onclick="toggleTab()">
+  <button class="tablinks1" id="tablinks1">Search By PIN</button>
+  <button class="tablinks2" id="tablinks2">Search By District</button>
+</div>
+<div id="Paris" class="tabcontent">
+  <label for="states">State state</label><select id="states" onchange="changeState(this)"><option value="">Select a state</option><option value="1">Andaman and Nicobar Islands</option><option value="2">Andhra Pradesh</option><option value="3">Arunachal Pradesh</option><option value="4">Assam</option><option value="5">Bihar</option><option value="6">Chandigarh</option><option value="7">Chhattisgarh</option><option value="8">Dadra and Nagar Haveli</option><option value="37">Daman and Diu</option><option value="9">Delhi</option><option value="10">Goa</option><option value="11">Gujarat</option><option value="12">Haryana</option><option value="13">Himachal Pradesh</option><option value="14">Jammu and Kashmir</option><option value="15">Jharkhand</option><option value="16">Karnataka</option><option value="17">Kerala</option><option value="18">Ladakh</option><option value="19">Lakshadweep</option><option value="20">Madhya Pradesh</option><option value="21">Maharashtra</option><option value="22">Manipur</option><option value="23">Meghalaya</option><option value="24">Mizoram</option><option value="25">Nagaland</option><option value="26">Odisha</option><option value="27">Puducherry</option><option value="28">Punjab</option><option value="29">Rajasthan</option><option value="30">Sikkim</option><option value="31">Tamil Nadu</option><option value="32">Telangana</option><option value="33">Tripura</option><option value="34">Uttar Pradesh</option><option value="35">Uttarakhand</option><option value="36">West Bengal</option></select>
+  <label for="districtID">Select district</label><select id="districtID"></select>
+</div>
+<div id="London" class="tabcontent">
+  <label for="pincode">Enter PIN</label><input class="input" type="number" id="pincode" placeholder="Enter Your PIN">
+</div>
+<label for="tomorrow">Date</label>  <input class="input" type="date" onchange="changeURL()" id="tomorrow">
+<input class="input" type="hidden" id="timeout" value="10">
+<div class="actions">
+  <button class="action" title="Start monitoring" onclick="startChecking()" type="button">Start monitoring</button>
+  <button class="action" title="Stop monitoring" onclick="stopAll()" type="button">Stop monitoring</button>
+  <button class="action" onclick="location.reload()" type="button">Reset All</button>
+  <button class="action" onclick="resetPlay()" type="button">Stop Sound</button>
+</div>
+<br/>
+<div class="action" id="advancedOptions">Advanced Options ►</div>
+<br/>
+<div class="content" id="advancedOptionsContent">
+    <button class="action" onclick="playMusic()" type="button">Test Sound</button>
+</div>
+<script>
+  document.getElementById("advancedOptions").addEventListener("click", function() {
+    this.classList.toggle("active");
+    const content = document.getElementById("advancedOptionsContent");
+    if (content.style.maxHeight) {
+      content.style.maxHeight = null;
+      document.getElementById("advancedOptions").innerText = "Advanced Options ►";
+    } else {
+      content.style.maxHeight = content.scrollHeight + "px";
+      document.getElementById("advancedOptions").innerText = "Advanced Options ▼";
+    }
+  });
+</script>
+<div id="demo" class="status">
+  <h3>Monitoring not started</h3>
+</div>
+<hr/>
+<br/>
+<h3>Current status</h3>
+<div class="filters">
+  <button class="filter_value" onclick="changeFilters1(this)" id=dateCheckBox ><span id="dateForCheckBox">Tomorrow</span></button>
+  <button class="filter_value" onclick="changeFilters1(this)" id=covisheild >Covisheild </button>
+  <button class="filter_value" onclick="changeFilters1(this)" id=covaxin >Covaxin </button>
+  <button class="filter_value" onclick="changeFilters1(this)" id=sputnikv >Sputnik V </button>
+  <button class="filter_value" onclick="changeFilters1(this)" id=minage18 >18+ </button>
+  <button class="filter_value" onclick="changeFilters1(this)" id=minage45 >45+ </button>
+  <button class="filter_value" onclick="changeFilters1(this)" id=dose1 >Dose 1 </button>
+  <button class="filter_value" onclick="changeFilters1(this)" id=dose2 >Dose 2 </button>
+  <button class="filter_value" onclick="changeFilters1(this)" id=paid >Paid </button>
+  <button class="filter_value" onclick="changeFilters1(this)" id=free >Free </button>
+  <button class="filter_value" onclick="changeFilters1(this)" id=hide >Show All</button>
+</div>
+<br/>
+<div id="currentTable" class="status">
+  &nbsp; Empty
+</div>
+<hr/>
+<script>
+  function changeFilters1(param) {
+    switch (param.id) {
+      case "dateCheckBox":
+        filterByDate = !filterByDate;
+        break;
+      case "covisheild":
+        filterBycovisheild = !filterBycovisheild;
+        break;
+      case "covaxin":
+        filterBycovaxin = !filterBycovaxin;
+        break;
+      case "sputnikv" :
+        filterBysputnikv = !filterBysputnikv;
+        break;
+      case "minage18":
+        filterByminage18 = !filterByminage18;
+        break;
+      case "minage45":
+        filterByminage45 = !filterByminage45;
+        break;
+      case "dose1":
+        filterBydose1 = !filterBydose1;
+        break;
+      case "dose2":
+        filterBydose2 = !filterBydose2;
+        break;
+      case "paid":
+        filterBypaid = !filterBypaid;
+        break;
+      case "free":
+        filterByfree = !filterByfree;
+        break;
+      case "hide":
+        filterByhide = !filterByhide;
+        break;
+    }
+    newResponse(JSON.parse(prevText), false, false);
+    param.classList.toggle("selected");
+  }
+  function changeState (select) {
+    const districts = [[["Nicobar","3"],["North and Middle Andaman","1"],["South Andaman","2"]],[["Anantapur","9"],["Chittoor","10"],["East Godavari","11"],["Guntur","5"],["Krishna","4"],["Kurnool","7"],["Prakasam","12"],["Sri Potti Sriramulu Nellore","13"],["Srikakulam","14"],["Visakhapatnam","8"],["Vizianagaram","15"],["West Godavari","16"],["YSR District, Kadapa (Cuddapah)","6"]],[["Anjaw","22"],["Changlang","20"],["Dibang Valley","25"],["East Kameng","23"],["East Siang","42"],["Itanagar Capital Complex","17"],["Kamle","24"],["Kra Daadi","27"],["Kurung Kumey","21"],["Lepa Rada","33"],["Lohit","29"],["Longding","40"],["Lower Dibang Valley","31"],["Lower Siang","18"],["Lower Subansiri","32"],["Namsai","36"],["Pakke Kessang","19"],["Papum Pare","39"],["Shi Yomi","35"],["Siang","37"],["Tawang","30"],["Tirap","26"],["Upper Siang","34"],["Upper Subansiri","41"],["West Kameng","28"],["West Siang","38"]],[["Baksa","46"],["Barpeta","47"],["Biswanath","765"],["Bongaigaon","57"],["Cachar","66"],["Charaideo","766"],["Chirang","58"],["Darrang","48"],["Dhemaji","62"],["Dhubri","59"],["Dibrugarh","43"],["Dima Hasao","67"],["Goalpara","60"],["Golaghat","53"],["Hailakandi","68"],["Hojai","764"],["Jorhat","54"],["Kamrup Metropolitan","49"],["Kamrup Rural","50"],["Karbi-Anglong","51"],["Karimganj","69"],["Kokrajhar","61"],["Lakhimpur","63"],["Majuli","767"],["Morigaon","55"],["Nagaon","56"],["Nalbari","52"],["Sivasagar","44"],["Sonitpur","64"],["South Salmara Mankachar","768"],["Tinsukia","45"],["Udalguri","65"],["West Karbi Anglong","769"]],[["Araria","74"],["Arwal","78"],["Aurangabad","77"],["Banka","83"],["Begusarai","98"],["Bhagalpur","82"],["Bhojpur","99"],["Buxar","100"],["Darbhanga","94"],["East Champaran","105"],["Gaya","79"],["Gopalganj","104"],["Jamui","107"],["Jehanabad","91"],["Kaimur","80"],["Katihar","75"],["Khagaria","101"],["Kishanganj","76"],["Lakhisarai","84"],["Madhepura","70"],["Madhubani","95"],["Munger","85"],["Muzaffarpur","86"],["Nalanda","90"],["Nawada","92"],["Patna","97"],["Purnia","73"],["Rohtas","81"],["Saharsa","71"],["Samastipur","96"],["Saran","102"],["Sheikhpura","93"],["Sheohar","87"],["Sitamarhi","88"],["Siwan","103"],["Supaul","72"],["Vaishali","89"],["West Champaran","106"]],[["Chandigarh","108"]],[["Balod","110"],["Baloda bazar","111"],["Balrampur","112"],["Bastar","113"],["Bemetara","114"],["Bijapur","115"],["Bilaspur","116"],["Dantewada","117"],["Dhamtari","118"],["Durg","119"],["Gariaband","120"],["Gaurela Pendra Marwahi ","136"],["Janjgir-Champa","121"],["Jashpur","122"],["Kanker","123"],["Kawardha","135"],["Kondagaon","124"],["Korba","125"],["Koriya","126"],["Mahasamund","127"],["Mungeli","128"],["Narayanpur","129"],["Raigarh","130"],["Raipur","109"],["Rajnandgaon","131"],["Sukma","132"],["Surajpur","133"],["Surguja","134"]],[["Dadra and Nagar Haveli","137"]],[["Central Delhi","141"],["East Delhi","145"],["New Delhi","140"],["North Delhi","146"],["North East Delhi","147"],["North West Delhi","143"],["Shahdara","148"],["South Delhi","149"],["South East Delhi","144"],["South West Delhi","150"],["West Delhi","142"]],[["North Goa","151"],["South Goa","152"]],[["Ahmedabad","154"],["Ahmedabad Corporation","770"],["Amreli","174"],["Anand","179"],["Aravalli","158"],["Banaskantha","159"],["Bharuch","180"],["Bhavnagar","175"],["Bhavnagar Corporation","771"],["Botad","176"],["Chhotaudepur","181"],["Dahod","182"],["Dang","163"],["Devbhumi Dwaraka","168"],["Gandhinagar","153"],["Gandhinagar Corporation","772"],["Gir Somnath","177"],["Jamnagar","169"],["Jamnagar Corporation","773"],["Junagadh","178"],["Junagadh Corporation","774"],["Kheda","156"],["Kutch","170"],["Mahisagar","183"],["Mehsana","160"],["Morbi","171"],["Narmada","184"],["Navsari","164"],["Panchmahal","185"],["Patan","161"],["Porbandar","172"],["Rajkot","173"],["Rajkot Corporation","775"],["Sabarkantha","162"],["Surat","165"],["Surat Corporation","776"],["Surendranagar","157"],["Tapi","166"],["Vadodara","155"],["Vadodara Corporation","777"],["Valsad","167"]],[["Ambala","193"],["Bhiwani","200"],["Charkhi Dadri","201"],["Faridabad","199"],["Fatehabad","196"],["Gurgaon","188"],["Hisar","191"],["Jhajjar","189"],["Jind","204"],["Kaithal","190"],["Karnal","203"],["Kurukshetra","186"],["Mahendragarh","206"],["Nuh","205"],["Palwal","207"],["Panchkula","187"],["Panipat","195"],["Rewari","202"],["Rohtak","192"],["Sirsa","194"],["Sonipat","198"],["Yamunanagar","197"]],[["Bilaspur","219"],["Chamba","214"],["Hamirpur","217"],["Kangra","213"],["Kinnaur","216"],["Kullu","211"],["Lahaul Spiti","210"],["Mandi","215"],["Shimla","208"],["Sirmaur","212"],["Solan","209"],["Una","218"]],[["Anantnag","224"],["Bandipore","223"],["Baramulla","225"],["Budgam","229"],["Doda","232"],["Ganderbal","228"],["Jammu","230"],["Kathua","234"],["Kishtwar","231"],["Kulgam","221"],["Kupwara","226"],["Poonch","238"],["Pulwama","227"],["Rajouri","237"],["Ramban","235"],["Reasi","239"],["Samba","236"],["Shopian","222"],["Srinagar","220"],["Udhampur","233"]],[["Bokaro","242"],["Chatra","245"],["Deoghar","253"],["Dhanbad","257"],["Dumka","258"],["East Singhbhum","247"],["Garhwa","243"],["Giridih","256"],["Godda","262"],["Gumla","251"],["Hazaribagh","255"],["Jamtara","259"],["Khunti","252"],["Koderma","241"],["Latehar","244"],["Lohardaga","250"],["Pakur","261"],["Palamu","246"],["Ramgarh","254"],["Ranchi","240"],["Sahebganj","260"],["Seraikela Kharsawan","248"],["Simdega","249"],["West Singhbhum","263"]],[["Bagalkot","270"],["Bangalore Rural","276"],["Bangalore Urban","265"],["BBMP","294"],["Belgaum","264"],["Bellary","274"],["Bidar","272"],["Chamarajanagar","271"],["Chikamagalur","273"],["Chikkaballapur","291"],["Chitradurga","268"],["Dakshina Kannada","269"],["Davanagere","275"],["Dharwad","278"],["Gadag","280"],["Gulbarga","267"],["Hassan","289"],["Haveri","279"],["Kodagu","283"],["Kolar","277"],["Koppal","282"],["Mandya","290"],["Mysore","266"],["Raichur","284"],["Ramanagara","292"],["Shimoga","287"],["Tumkur","288"],["Udupi","286"],["Uttar Kannada","281"],["Vijayapura","293"],["Yadgir","285"]],[["Alappuzha","301"],["Ernakulam","307"],["Idukki","306"],["Kannur","297"],["Kasaragod","295"],["Kollam","298"],["Kottayam","304"],["Kozhikode","305"],["Malappuram","302"],["Palakkad","308"],["Pathanamthitta","300"],["Thiruvananthapuram","296"],["Thrissur","303"],["Wayanad","299"]],[["Kargil","309"],["Leh","310"]],[["Agatti Island","796"],["Lakshadweep","311"]],[["Agar","320"],["Alirajpur","357"],["Anuppur","334"],["Ashoknagar","354"],["Balaghat","338"],["Barwani","343"],["Betul","362"],["Bhind","351"],["Bhopal","312"],["Burhanpur","342"],["Chhatarpur","328"],["Chhindwara","337"],["Damoh","327"],["Datia","350"],["Dewas","324"],["Dhar","341"],["Dindori","336"],["Guna","348"],["Gwalior","313"],["Harda","361"],["Hoshangabad","360"],["Indore","314"],["Jabalpur","315"],["Jhabua","340"],["Katni","353"],["Khandwa","339"],["Khargone","344"],["Mandla","335"],["Mandsaur","319"],["Morena","347"],["Narsinghpur","352"],["Neemuch","323"],["Panna","326"],["Raisen","359"],["Rajgarh","358"],["Ratlam","322"],["Rewa","316"],["Sagar","317"],["Satna","333"],["Sehore","356"],["Seoni","349"],["Shahdol","332"],["Shajapur","321"],["Sheopur","346"],["Shivpuri","345"],["Sidhi","331"],["Singrauli","330"],["Tikamgarh","325"],["Ujjain","318"],["Umaria","329"],["Vidisha","355"]],[["Ahmednagar","391"],["Akola","364"],["Amravati","366"],["Aurangabad ","397"],["Beed","384"],["Bhandara","370"],["Buldhana","367"],["Chandrapur","380"],["Dhule","388"],["Gadchiroli","379"],["Gondia","378"],["Hingoli","386"],["Jalgaon","390"],["Jalna","396"],["Kolhapur","371"],["Latur","383"],["Mumbai","395"],["Nagpur","365"],["Nanded","382"],["Nandurbar","387"],["Nashik","389"],["Osmanabad","381"],["Palghar","394"],["Parbhani","385"],["Pune","363"],["Raigad","393"],["Ratnagiri","372"],["Sangli","373"],["Satara","376"],["Sindhudurg","374"],["Solapur","375"],["Thane","392"],["Wardha","377"],["Washim","369"],["Yavatmal","368"]],[["Bishnupur","398"],["Chandel","399"],["Churachandpur","400"],["Imphal East","401"],["Imphal West","402"],["Jiribam","410"],["Kakching","413"],["Kamjong","409"],["Kangpokpi","408"],["Noney","412"],["Pherzawl","411"],["Senapati","403"],["Tamenglong","404"],["Tengnoupal","407"],["Thoubal","405"],["Ukhrul","406"]],[["East Garo Hills","424"],["East Jaintia Hills","418"],["East Khasi Hills","414"],["North Garo Hills","423"],["Ri-Bhoi","417"],["South Garo Hills","421"],["South West Garo Hills","422"],["South West Khasi Hills","415"],["West Garo Hills","420"],["West Jaintia Hills","416"],["West Khasi Hills","419"]],[["Aizawl East","425"],["Aizawl West","426"],["Champhai","429"],["Kolasib","428"],["Lawngtlai","432"],["Lunglei","431"],["Mamit","427"],["Serchhip","430"],["Siaha","433"]],[["Dimapur","434"],["Kiphire","444"],["Kohima","441"],["Longleng","438"],["Mokokchung","437"],["Mon","439"],["Peren","435"],["Phek","443"],["Tuensang","440"],["Wokha","436"],["Zunheboto","442"]],[["Angul","445"],["Balangir","448"],["Balasore","447"],["Bargarh","472"],["Bhadrak","454"],["Boudh","468"],["Cuttack","457"],["Deogarh","473"],["Dhenkanal","458"],["Gajapati","467"],["Ganjam","449"],["Jagatsinghpur","459"],["Jajpur","460"],["Jharsuguda","474"],["Kalahandi","464"],["Kandhamal","450"],["Kendrapara","461"],["Kendujhar","455"],["Khurda","446"],["Koraput","451"],["Malkangiri","469"],["Mayurbhanj","456"],["Nabarangpur","470"],["Nayagarh","462"],["Nuapada","465"],["Puri","463"],["Rayagada","471"],["Sambalpur","452"],["Subarnapur","466"],["Sundargarh","453"]],[["Karaikal","476"],["Mahe","477"],["Puducherry","475"],["Yanam","478"]],[["Amritsar","485"],["Barnala","483"],["Bathinda","493"],["Faridkot","499"],["Fatehgarh Sahib","484"],["Fazilka","487"],["Ferozpur","480"],["Gurdaspur","489"],["Hoshiarpur","481"],["Jalandhar","492"],["Kapurthala","479"],["Ludhiana","488"],["Mansa","482"],["Moga","491"],["Pathankot","486"],["Patiala","494"],["Rup Nagar","497"],["Sangrur","498"],["SAS Nagar","496"],["SBS Nagar","500"],["Sri Muktsar Sahib","490"],["Tarn Taran","495"]],[["Ajmer","507"],["Alwar","512"],["Banswara","519"],["Baran","516"],["Barmer","528"],["Bharatpur","508"],["Bhilwara","523"],["Bikaner","501"],["Bundi","514"],["Chittorgarh","521"],["Churu","530"],["Dausa","511"],["Dholpur","524"],["Dungarpur","520"],["Hanumangarh","517"],["Jaipur I","505"],["Jaipur II","506"],["Jaisalmer","527"],["Jalore","533"],["Jhalawar","515"],["Jhunjhunu","510"],["Jodhpur","502"],["Karauli","525"],["Kota","503"],["Nagaur","532"],["Pali","529"],["Pratapgarh","522"],["Rajsamand","518"],["Sawai Madhopur","534"],["Sikar","513"],["Sirohi","531"],["Sri Ganganagar","509"],["Tonk","526"],["Udaipur","504"]],[["East Sikkim","535"],["North Sikkim","537"],["South Sikkim","538"],["West Sikkim","536"]],[["Aranthangi","779"],["Ariyalur","555"],["Attur","578"],["Chengalpet","565"],["Chennai","571"],["Cheyyar","778"],["Coimbatore","539"],["Cuddalore","547"],["Dharmapuri","566"],["Dindigul","556"],["Erode","563"],["Kallakurichi","552"],["Kanchipuram","557"],["Kanyakumari","544"],["Karur","559"],["Kovilpatti","780"],["Krishnagiri","562"],["Madurai","540"],["Nagapattinam","576"],["Namakkal","558"],["Nilgiris","577"],["Palani","564"],["Paramakudi","573"],["Perambalur","570"],["Poonamallee","575"],["Pudukkottai","546"],["Ramanathapuram","567"],["Ranipet","781"],["Salem","545"],["Sivaganga","561"],["Sivakasi","580"],["Tenkasi","551"],["Thanjavur","541"],["Theni","569"],["Thoothukudi (Tuticorin)","554"],["Tiruchirappalli","560"],["Tirunelveli","548"],["Tirupattur","550"],["Tiruppur","568"],["Tiruvallur","572"],["Tiruvannamalai","553"],["Tiruvarur","574"],["Vellore","543"],["Viluppuram","542"],["Virudhunagar","549"]],[["Adilabad","582"],["Bhadradri Kothagudem","583"],["Hyderabad","581"],["Jagtial","584"],["Jangaon","585"],["Jayashankar Bhupalpally","586"],["Jogulamba Gadwal","587"],["Kamareddy","588"],["Karimnagar","589"],["Khammam","590"],["Kumuram Bheem","591"],["Mahabubabad","592"],["Mahabubnagar","593"],["Mancherial","594"],["Medak","595"],["Medchal","596"],["Mulugu","612"],["Nagarkurnool","597"],["Nalgonda","598"],["Narayanpet","613"],["Nirmal","599"],["Nizamabad","600"],["Peddapalli","601"],["Rajanna Sircilla","602"],["Rangareddy","603"],["Sangareddy","604"],["Siddipet","605"],["Suryapet","606"],["Vikarabad","607"],["Wanaparthy","608"],["Warangal(Rural)","609"],["Warangal(Urban)","610"],["Yadadri Bhuvanagiri","611"]],[["Dhalai","614"],["Gomati","615"],["Khowai","616"],["North Tripura","617"],["Sepahijala","618"],["South Tripura","619"],["Unakoti","620"],["West Tripura","621"]],[["Agra","622"],["Aligarh","623"],["Ambedkar Nagar","625"],["Amethi","626"],["Amroha","627"],["Auraiya","628"],["Ayodhya","646"],["Azamgarh","629"],["Badaun","630"],["Baghpat","631"],["Bahraich","632"],["Balarampur","633"],["Ballia","634"],["Banda","635"],["Barabanki","636"],["Bareilly","637"],["Basti","638"],["Bhadohi","687"],["Bijnour","639"],["Bulandshahr","640"],["Chandauli","641"],["Chitrakoot","642"],["Deoria","643"],["Etah","644"],["Etawah","645"],["Farrukhabad","647"],["Fatehpur","648"],["Firozabad","649"],["Gautam Buddha Nagar","650"],["Ghaziabad","651"],["Ghazipur","652"],["Gonda","653"],["Gorakhpur","654"],["Hamirpur","655"],["Hapur","656"],["Hardoi","657"],["Hathras","658"],["Jalaun","659"],["Jaunpur","660"],["Jhansi","661"],["Kannauj","662"],["Kanpur Dehat","663"],["Kanpur Nagar","664"],["Kasganj","665"],["Kaushambi","666"],["Kushinagar","667"],["Lakhimpur Kheri","668"],["Lalitpur","669"],["Lucknow","670"],["Maharajganj","671"],["Mahoba","672"],["Mainpuri","673"],["Mathura","674"],["Mau","675"],["Meerut","676"],["Mirzapur","677"],["Moradabad","678"],["Muzaffarnagar","679"],["Pilibhit","680"],["Pratapgarh","682"],["Prayagraj","624"],["Raebareli","681"],["Rampur","683"],["Saharanpur","684"],["Sambhal","685"],["Sant Kabir Nagar","686"],["Shahjahanpur","688"],["Shamli","689"],["Shravasti","690"],["Siddharthnagar","691"],["Sitapur","692"],["Sonbhadra","693"],["Sultanpur","694"],["Unnao","695"],["Varanasi","696"]],[["Almora","704"],["Bageshwar","707"],["Chamoli","699"],["Champawat","708"],["Dehradun","697"],["Haridwar","702"],["Nainital","709"],["Pauri Garhwal","698"],["Pithoragarh","706"],["Rudraprayag","700"],["Tehri Garhwal","701"],["Udham Singh Nagar","705"],["Uttarkashi","703"]],[["Alipurduar District","710"],["Bankura","711"],["Basirhat HD (North 24 Parganas)","712"],["Birbhum","713"],["Bishnupur HD (Bankura)","714"],["Cooch Behar","715"],["COOCHBEHAR","783"],["Dakshin Dinajpur","716"],["Darjeeling","717"],["Diamond Harbor HD (S 24 Parganas)","718"],["East Bardhaman","719"],["Hoogly","720"],["Howrah","721"],["Jalpaiguri","722"],["Jhargram","723"],["Kalimpong","724"],["Kolkata","725"],["Malda","726"],["Murshidabad","727"],["Nadia","728"],["Nandigram HD (East Medinipore)","729"],["North 24 Parganas","730"],["Paschim Medinipore","731"],["Purba Medinipore","732"],["Purulia","733"],["Rampurhat HD (Birbhum)","734"],["South 24 Parganas","735"],["Uttar Dinajpur","736"],["West Bardhaman","737"]],[["Daman","138"],["Diu","139"]]];
+    const selectDistricts = districts[select.value-1];
+    const distSelect = document.getElementById("districtID")
+    distSelect.innerHTML="";
+    selectDistricts.forEach(value =>
+            distSelect.options.add(new Option(value[0], value[1]))
+    )
+  }
+  function getTomorrow () {
+    let nextDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    let month = nextDate.getMonth();
+    let day = nextDate.getDate();
+    if (month < 10) month = "0" + ( month + 1 );
+    if (day < 10) day = "0" + day;
+    return [nextDate.getFullYear(), month, day].join('-');
+  }
+  let retryCount = 0;
+  let prevText = "{\"centers\":[]}";
+  let url;
+  let playCount = 1;
+  let lastCheckedTime = "NA";
+  let lastAvailableDetails = "NA";
+  let timeOut = 10;
+  let timer = 0;
+  let nameListToIgnore = [];
+  let filterByDate = false;
+  let filterBycovisheild = false;
+  let filterBycovaxin = false;
+  let filterBysputnikv = false;
+  let filterByminage18 = false;
+  let filterByminage45 = false;
+  let filterBydose1 = false;
+  let filterBydose2 = false;
+  let filterBypaid = false;
+  let filterByfree = false;
+  let filterByhide = false;
+  let table = {
+    "header": "<tr class='header'><td>" + "Vaccination Centre" + "</td><td>" + "Date" + "</td><td>" + "Available Dose 1" + "</td><td>" + "Available Dose 2" + "</td><td>" + "Vaccine" +"</td><td>" + "Fee type" +"</td><td>" + "Age min" + "</td></tr>",
+    "available": [],
+    "notAvailable": []
+  }
+  let isDistrictElsePIN = true;
+
+  function changeURL() {
+    if(isDistrictElsePIN) {
+      if (document.getElementById("districtID").value === "") {
+        alert("Please select State & District");
+        return;
+      }
+      url = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id=" +
+        document.getElementById("districtID").value + "&date=" + getFormattedDateFormat();
+    } else {
+      if (document.getElementById("pincode").value === "") {
+        alert("Please enter correct pincode");
+        return;
+      }
+      url = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByPin?pincode=" +
+        document.getElementById("pincode").value + "&date=" + getFormattedDateFormat();
+    }
+    timeOut = document.getElementById("timeout").value * 1000;
+  }
+  function startChecking() {
+    if (timer) {
+      clearTimeout(timer);
+      timer = 0;
+    }
+    changeURL();
+    loadDoc();
+    document.getElementById("demo").scrollIntoView();
+  }
+  function addToRemovedList(name){
+    nameListToIgnore.push(name);
+    newResponse(JSON.parse(prevText), false,false)
+  }
+  function getFormattedDateFormat() {
+    let d = new Date(document.getElementById("tomorrow").value);
+    let dstring = `${("0" + d.getDate()).slice(-2)}\-${("0" + (d.getMonth() + 1)).slice(-2)}\-${d.getFullYear()}`;
+    document.getElementById("dateForCheckBox").innerText = dstring;
+    return dstring;
+  }
+  function playSpecial() {
+    play();setTimeout(play, 1500);setTimeout(play, 3000);
+  }
+
+  function applyFilter(b , a) {
+    let isAvailableAfterFilter = false;
+    if(b.available_capacity != 0) {
+      isAvailableAfterFilter = true;
+
+      let filterByPrice = filterBypaid || filterByfree;
+      if(filterByPrice) {
+        console.log("Checking Price " + a.fee_type + " <---> "+ filterBypaid + " <paid=free> " + filterByfree);
+        if (filterBypaid && a.fee_type == "Paid") {
+          isAvailableAfterFilter = true;
+        } else if (filterByfree && a.fee_type == "Free") {
+          isAvailableAfterFilter = true;
+        } else {
+          console.log("Price is not available" + a.fee_type);
+          return false;
+        }
+      }
+
+      if(filterByDate) {
+        if (b.date === getFormattedDateFormat()) {
+          isAvailableAfterFilter = true;
+        } else {
+          console.log("Date is not available" + b.date);
+          return false;
+        }
+      }
+
+      let filterByVaccine = filterBycovisheild || filterBycovaxin || filterBysputnikv;
+      if(filterByVaccine) {
+        if (filterBycovisheild && b.vaccine == "COVISHIELD") {
+          isAvailableAfterFilter = true;
+        } else if (filterBycovaxin && b.vaccine == "COVAXIN") {
+          isAvailableAfterFilter = true;
+        } else if (filterBysputnikv && b.vaccine == "SPUTNIK V") {
+          isAvailableAfterFilter = true;
+        } else {
+          console.log("Vaccine is not avaiable" + b.vaccine)
+          return false;
+        }
+      }
+
+      const filterByDose = filterBydose1 || filterBydose2;
+      if (filterByDose) {
+        try {
+          if (filterBydose1 && b.available_capacity_dose1 != 0) {
+            isAvailableAfterFilter = true;
+          } else if (filterBydose2 && b.available_capacity_dose2 != 0) {
+            isAvailableAfterFilter = true;
+          } else {
+            console.log("Dose is not available_capacity_dose1 =>" + b.available_capacity_dose1 + " 2=> " + b.available_capacity_dose2)
+            return false;
+          }
+        } catch (e) {
+          console.log(e);
+          console.log("ERROR IS HERE")
+        }
+      }
+
+      const filterByAge = filterByminage18 || filterByminage45;
+      if(filterByAge) {
+        if (filterByminage45 && b.min_age_limit <= 45) {
+          isAvailableAfterFilter = true;
+        } else if (filterByminage18 && b.min_age_limit <= 18) {
+          isAvailableAfterFilter =true;
+        } else {
+          console.log("Age is not avaiable" + b.min_age_limit)
+          return false;
+        }
+      }
+    }
+    return isAvailableAfterFilter;
+  }
+
+
+  let firstTime = true;
+  let sessionIDs = [[],[],[],[],[],[]];//schedules_started, schedules_started_dose1, schedules_started_dose2, schedules_ended, schedules_ended_dose1, schedules_ended_dose2
+  function registerNewAvailability(jsonResult) {
+    const xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function () {
+      if (this.readyState === 4 && this.status === 200) {
+        console.log(this.responseText);
+      }
+    };
+    xhttp.open("POST", "/alertAvailable.php?refresh="+firstTime, true);
+    xhttp.setRequestHeader('Content-Type', 'application/json');
+    xhttp.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    xhttp.setRequestHeader('Access-Control-Allow-Origin', '*');
+    xhttp.send(JSON.stringify(jsonResult));
+    if (firstTime) {
+      firstTime = false;
+    }
+  }
+  function newResponse(jsonResult, sound, tracknew) {
+    let isAvailable = false
+    let available = [];
+    let notAvailable = [];
+    jsonResult.centers.sort(function(a,b) {return (a.name > b.name)?1:-1;});
+    jsonResult.centers.forEach(function (a) {
+      a.sessions.forEach(function (b) {
+          const isAvailableAfterFilter = applyFilter(b, a);
+          if (isAvailableAfterFilter) {
+            available.push("<tr class='available'>     <td>" + a.name + "</td><td>" + b.date + "</td><td>" + b.available_capacity_dose1 + "</td><td>" + b.available_capacity_dose2 + "</td><td>" + b.vaccine + "</td><td>" + a.fee_type + "</td><td>" + b.min_age_limit + "</td><td><button onclick=window.open('https://selfregistration.cowin.gov.in','_blank')>Book now</button></td></tr>");
+            if (sound) {
+              playMusic();
+              playSpecial();
+            }
+            isAvailable = true;
+            lastAvailableDetails = a.name + " - " + new Date();
+          } else {
+            if (nameListToIgnore.indexOf(a.name) === -1) {
+              notAvailable.push("<tr class='not-available'><td>" + a.name + "</td><td>" + b.date + "</td><td>" + b.available_capacity_dose1 + "</td><td>" + b.available_capacity_dose2 + "</td><td>" + b.vaccine + "</td><td>" + a.fee_type + "</td><td>" + b.min_age_limit + "</td><td><button onclick='addToRemovedList(\"" + a.name + "\")'>Remove</button></td></tr>");
+            }
+          }
+      })
+
+    })
+    table.available = available;
+    table.notAvailable = notAvailable;
+    displayTable();
+    if(sound) {
+      play();
+    }
+    document.bgColor = "#EEEEEE";
+    if (tracknew) {
+      registerNewAvailability(jsonResult);
+    }
+    return isAvailable;
+  }
+
+  function displayTable() {
+    let tableHTML = "<table>" + table.header + table.available.join(" ");
+    if (filterByhide) {
+      tableHTML += table.notAvailable.join(" ");
+    }
+    tableHTML += "</table>";
+    document.getElementById("currentTable").innerHTML =  tableHTML;
+  }
+
+  function sameResponse () {
+    document.bgColor = "#FFFFFF";
+  }
+
+  function loadDoc() {
+    const xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function () {
+      if (this.readyState === 4 && this.status === 200) {
+        if (this.responseText === prevText) {
+          sameResponse();
+        } else {
+          prevText = this.responseText;
+          if (newResponse(JSON.parse(this.responseText), true, true)) {
+            playCount = 5;
+          }
+        }
+        document.getElementById("demo").innerHTML = "Checked " + retryCount++ + " times. Last checked at "+ lastCheckedTime + ". Last available at "+ lastAvailableDetails ;
+        timer = setTimeout(loadDoc, timeOut)
+        if (playCount > 0) {
+          playCount--;
+          play();
+        }
+      } else if (this.readyState === 4) {
+        timer = setTimeout(loadDoc, timeOut)
+      }
+    };
+    xhttp.open("GET", url, true);
+    xhttp.send();
+    lastCheckedTime = (new Date()).toString();
+  }
+
+  const audio1 = new Audio('https://bigsoundbank.com/UPLOAD/mp3/2255.mp3');
+  const audio2 = new Audio('https://bigsoundbank.com/UPLOAD/mp3/1928.mp3');
+  function play() {
+    audio1.play();
+  }
+  function playMusic() {
+    audio2.play();
+  }
+
+  function resetPlay() {
+    playCount = 0;
+    audio1.pause();
+    audio2.pause();
+  }
+
+  function stopAll(){
+    if (timer) {
+      clearTimeout(timer);
+      timer = 0;
+    }
+    resetPlay();
+  }
+  function setDefault() {
+    document.getElementById("tablinks1").click();
+    document.getElementById("tomorrow").value = getTomorrow();
+  }
+  function toggleTab() {
+    let i, tabcontent, ss;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    if (isDistrictElsePIN) {
+      tabcontent[0].style.display = "none";
+      tabcontent[1].style.display = "block";
+      ss = document.getElementById("tablinks1");
+      ss.className += " active";
+      ss = document.getElementById("tablinks2");
+      ss.className = "tablinks2";
+    } else {
+      tabcontent[1].style.display = "none";
+      tabcontent[0].style.display = "block";
+      ss = document.getElementById("tablinks2");
+      ss.className += " active"
+      ss = document.getElementById("tablinks1");
+      ss.className = "tablinks1";
+    }
+    isDistrictElsePIN = !isDistrictElsePIN;
+  }
+  setDefault();
+</script>
+<style>
+  .header2 {
+    padding: 20px 10px 40px 30px;
+    background-color: #F0F0F8;
+  }
+  .menu {
+    float: right;
+    padding: 1px 30px 10px 10px;
+  }
+  .menu1 {
+    font-weight: bold;
+    float: left;
+  }
+  .headerlink {
+    text-decoration: none;
+    font-size: small;
+  }
+  .content {
+    padding: 0 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease-out;
+  }
+  .input {
+    width: 25%;
+    min-width: 300px;
+    max-width: 100%;
+    height: 45px;
+    margin: 5px;
+    padding: .5em;
+    border-radius: 9px;
+    border: dodgerblue solid 1px;
+    font-size: larger;
+  }
+  h1 {
+    color: #212529;
+    font-size: larger;
+  }
+  select {
+    width: 25%;
+    min-width: 300px;
+    max-width: 100%;
+    height: 45px;
+    margin: 5px;
+    font-size: medium;
+    padding: .5em;
+    border-radius: 9px;
+  }
+  label {
+    font-size: large;
+    display: block;
+    height: 10px;
+    margin: 5px;
+  }
+  td {
+    padding: 7px;
+  }
+  button.action {
+    width: 10%;
+    padding: .8em;
+    border-radius: 9px;
+    background-color: #002060;
+    color: white;
+    font-weight: bold;
+    float: bottom;
+    min-width: 144px;
+    margin-bottom: 5px;
+  }
+  button.action:hover {
+    background-color: #503090;
+    box-shadow: 2px 2px #002060;
+    transform: translate3d(2,2,2px);
+  }
+  button.action:active {
+    background-color: aliceblue;
+    color: #002060;
+    box-shadow: 4px 4px #002060;
+    transform: translate3d(4,4,4px);
+  }
+  .available {
+    background-color: greenyellow;
+  }
+  .not-available {
+    background-color: gray;
+    color: white;
+  }
+  .header {
+    background-color: white;
+  }
+  /* For the tab above*/
+  .tab {
+    overflow: hidden;
+    font-weight: bold;
+    border: 1px solid #002060;
+    background-color: white;
+    width: 328px;
+    border-radius: 25px;
+  }
+  .tab button {
+    font-weight: bold;
+    margin-left: -20px;
+    border-radius: 25px;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 14px 30px;
+    transition: 0.3s;
+    font-size: medium;
+    background-color: white;
+    color: #002060;
+  }
+  .tab button:hover {
+    background-color: #ddd;
+  }
+  .tab button.active {
+    background-color: #002060;
+    color: white;
+  }
+  .tabcontent {
+    display: none;
+    -webkit-animation: fadeEffect 1s;
+    animation: fadeEffect 1s;
+  }
+  body {
+    font-family: Helvetica,serif;
+  }
+  hr {
+    height:1px;
+    border: none;
+  }
+  @media only screen and (max-width: 650px) {
+    hr {background-color: #002060;}
+  }
+  @media only screen and (min-width: 650px) and (max-width: 1200px) {
+    hr {background-image: linear-gradient(to right, #3160A0, white);}
+  }
+  @media only screen and (min-width: 1200px) {
+    hr {background-image: linear-gradient(to right, #3160A0, white, white);}
+  }
+  button.footer_button {
+    width: fit-content;
+    min-width: 100px;
+    border-width: 1px;
+    height: 38px;
+    color: #002060;
+    background-color: white;
+  }
+  button.footer_button:hover {
+    color: white;
+  }
+  body {
+    opacity: 85%;
+  }
+   div {
+     visibility: hidden;
+   }
+  div.header2,div.menu,div.menu1,div.action,div.actions,div.tabcontent,div.tab,div.content,div.status,div.filters{
+    visibility: visible;
+  }
+  button.filter_value {
+    background-color: white;
+    padding: 3px 7px;
+    margin-bottom: 5px;
+    border-radius: 6px;
+    border-width: 1px;
+  }
+  button.filter_value.selected {
+    background-color: #002060;
+    color: white;
+    border-radius: 10px;
+    box-shadow: 2px 2px black;
+  }
+</style>
+<button class="action footer_button" onclick="window.open('https://youtu.be/1rSIRjOLtZU','_blank')">Help</button>
+<button class="action footer_button" onclick="window.open('https://www.youtube.com/channel/UCCdbe2G0yiy05t4DcsWypqg','_blank')">♥ Subscribe & Support ♥</button>
+<!--DONATION<form><script src="https://checkout.razorpay.com/v1/payment-button.js" data-payment_button_id="pl_HAkH2bxjogqa0E" async> </script> </form>-->
+</body>
+</html>
