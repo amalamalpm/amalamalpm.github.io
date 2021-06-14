@@ -66,6 +66,7 @@
   <button class="filter_value" onclick="changeFilters1(this)" id=covaxin >Covaxin </button>
   <button class="filter_value" onclick="changeFilters1(this)" id=sputnikv >Sputnik V </button>
   <button class="filter_value" onclick="changeFilters1(this)" id=minage18 >18+ </button>
+  <button class="filter_value" onclick="changeFilters1(this)" id=minage40 >40+ </button>
   <button class="filter_value" onclick="changeFilters1(this)" id=minage45 >45+ </button>
   <button class="filter_value" onclick="changeFilters1(this)" id=dose1 >Dose 1 </button>
   <button class="filter_value" onclick="changeFilters1(this)" id=dose2 >Dose 2 </button>
@@ -73,12 +74,67 @@
   <button class="filter_value" onclick="changeFilters1(this)" id=free >Free </button>
   <button class="filter_value" onclick="changeFilters1(this)" id=hide >Show All</button>
 </div>
+<label for="searchcenters">Filter centers by Name</label><input onchange="filterSearchCenters()" class="input" type="text" id="searchcenters" placeholder="comma separated center names">
 <br/>
 <div id="currentTable" class="status">
   &nbsp; Empty
 </div>
 <hr/>
 <script>
+  let debug = false;
+  let daysNew = 4;
+  let retryCount = 0;
+  let prevTextNew = [];
+  let urlNew = [];
+  let playCount = 1;
+  let lastCheckedTimeNew = [];
+  let lastAvailableDetailsNew = [];
+  let timeOut = 10;
+  let timer = 0;
+  let nameListToIgnore = [];
+  let filterByDate = false;
+  let filterBycovisheild = false;
+  let filterBycovaxin = false;
+  let filterBysputnikv = false;
+  let filterByminage18 = false;
+  let filterByminage40 = false;
+  let filterByminage45 = false;
+  let filterBydose1 = false;
+  let filterBydose2 = false;
+  let filterBypaid = false;
+  let filterByfree = false;
+  let filterByhide = 0;
+  let tableHeader = {
+    "header": "<tr class='header'><td>" + "Vaccination Centre" + "</td><td>" + "Date" + "</td><td>" + "Available Dose 1" + "</td><td>" + "Available Dose 2" + "</td><td>" + "Vaccine" +"</td><td>" + "Fee type" +"</td><td>" + "Age min" + "</td></tr>"
+  }
+  let tableNew = [];
+  let searchCenters =  [];
+  let isDistrictElsePIN = true;
+
+  function initValues () {
+    for (var days_i = 0; days_i < daysNew; days_i++) {
+      prevTextNew[days_i] = "{\"centers\":[]}";
+      lastCheckedTimeNew[days_i] = "NA";
+      lastAvailableDetailsNew[days_i] = "NA";
+      tableNew [days_i] = {
+        "available": [],
+        "notAvailable": [],
+        "availableFiltered": []
+      }
+    }
+  }
+  function debugLog(str) {
+    if (debug) {
+      console.log(str);
+    }
+  }
+  function filterSearchCenters() {
+    let searchcentersVal = document.getElementById("searchcenters").value;
+    searchCenters = searchcentersVal.split(",").map(function (x1){return x1.trim()}).filter(function (x2){return x2.length>0});
+    for (var i = 0; i < daysNew; i++) {
+      newResponse(JSON.parse(prevTextNew[i]), false, false, i);
+    }
+  }
   function changeFilters1(param) {
     switch (param.id) {
       case "dateCheckBox":
@@ -96,6 +152,9 @@
       case "minage18":
         filterByminage18 = !filterByminage18;
         break;
+      case "minage40":
+        filterByminage40 = !filterByminage40;
+        break;
       case "minage45":
         filterByminage45 = !filterByminage45;
         break;
@@ -112,10 +171,12 @@
         filterByfree = !filterByfree;
         break;
       case "hide":
-        filterByhide = !filterByhide;
+        filterByhide = (filterByhide+1)%3;
         break;
     }
-    newResponse(JSON.parse(prevText), false, false);
+    for (var i = 0; i < daysNew; i++) {
+      newResponse(JSON.parse(prevTextNew[i]), false, false, i);
+    }
     param.classList.toggle("selected");
   }
   function changeState (select) {
@@ -128,55 +189,32 @@
     )
   }
   function getTomorrow () {
-    let nextDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    let nextDate = new Date(Date.now());
     let month = nextDate.getMonth();
     let day = nextDate.getDate();
     if (month < 10) month = "0" + ( month + 1 );
     if (day < 10) day = "0" + day;
     return [nextDate.getFullYear(), month, day].join('-');
   }
-  let retryCount = 0;
-  let prevText = "{\"centers\":[]}";
-  let url;
-  let playCount = 1;
-  let lastCheckedTime = "NA";
-  let lastAvailableDetails = "NA";
-  let timeOut = 10;
-  let timer = 0;
-  let nameListToIgnore = [];
-  let filterByDate = false;
-  let filterBycovisheild = false;
-  let filterBycovaxin = false;
-  let filterBysputnikv = false;
-  let filterByminage18 = false;
-  let filterByminage45 = false;
-  let filterBydose1 = false;
-  let filterBydose2 = false;
-  let filterBypaid = false;
-  let filterByfree = false;
-  let filterByhide = false;
-  let table = {
-    "header": "<tr class='header'><td>" + "Vaccination Centre" + "</td><td>" + "Date" + "</td><td>" + "Available Dose 1" + "</td><td>" + "Available Dose 2" + "</td><td>" + "Vaccine" +"</td><td>" + "Fee type" +"</td><td>" + "Age min" + "</td></tr>",
-    "available": [],
-    "notAvailable": []
-  }
-  let isDistrictElsePIN = true;
-
   function changeURL() {
     if(isDistrictElsePIN) {
       if (document.getElementById("districtID").value === "") {
         alert("Please select State & District");
         return;
       }
-      url = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id=" +
-        document.getElementById("districtID").value + "&date=" + getFormattedDateFormat();
+      for (var days_i = 0; days_i < daysNew; days_i++) {
+        urlNew[days_i] = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id=" +
+        document.getElementById("districtID").value + "&date=" + getFormattedDateFormat(days_i);
+      }
     } else {
       if (document.getElementById("pincode").value === "") {
         alert("Please enter correct pincode");
         return;
       }
-      url = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByPin?pincode=" +
-        document.getElementById("pincode").value + "&date=" + getFormattedDateFormat();
+      for (var days_i = 0; days_i < daysNew; days_i++) {
+        urlNew[days_i] = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByPin?pincode=" +
+        document.getElementById("pincode").value + "&date=" + getFormattedDateFormat(days_i);
+      }
     }
     timeOut = document.getElementById("timeout").value * 1000;
   }
@@ -191,56 +229,65 @@
   }
   function addToRemovedList(name){
     nameListToIgnore.push(name);
-    newResponse(JSON.parse(prevText), false,false)
+    for (var i = 0; i < daysNew; i++) {
+      newResponse(JSON.parse(prevTextNew[i]), false, false, i);
+    }
   }
-  function getFormattedDateFormat() {
+
+  function getFormattedDateFormat(nextdays) {
     let d = new Date(document.getElementById("tomorrow").value);
-    let dstring = `${("0" + d.getDate()).slice(-2)}\-${("0" + (d.getMonth() + 1)).slice(-2)}\-${d.getFullYear()}`;
-    document.getElementById("dateForCheckBox").innerText = dstring;
+    let dstring = "";
+    if (nextdays == 0) {
+      dstring = `${("0" + d.getDate()).slice(-2)}\-${("0" + (d.getMonth() + 1)).slice(-2)}\-${d.getFullYear()}`;
+      document.getElementById("dateForCheckBox").innerText = dstring;
+    }
+    d.setDate(d.getDate() + nextdays * 7);
+    dstring = `${("0" + d.getDate()).slice(-2)}\-${("0" + (d.getMonth() + 1)).slice(-2)}\-${d.getFullYear()}`;
     return dstring;
   }
+
   function playSpecial() {
     play();setTimeout(play, 1500);setTimeout(play, 3000);
   }
 
   function applyFilter(b , a) {
-    let isAvailableAfterFilter = false;
+    let isAvailableAfterFilter = 0;
     if(b.available_capacity != 0) {
-      isAvailableAfterFilter = true;
+      isAvailableAfterFilter = 1;
 
       let filterByPrice = filterBypaid || filterByfree;
       if(filterByPrice) {
-        console.log("Checking Price " + a.fee_type + " <---> "+ filterBypaid + " <paid=free> " + filterByfree);
+        debugLog("Checking Price " + a.fee_type + " <---> "+ filterBypaid + " <paid=free> " + filterByfree);
         if (filterBypaid && a.fee_type == "Paid") {
-          isAvailableAfterFilter = true;
+          isAvailableAfterFilter = 1;
         } else if (filterByfree && a.fee_type == "Free") {
-          isAvailableAfterFilter = true;
+          isAvailableAfterFilter = 1;
         } else {
-          console.log("Price is not available" + a.fee_type);
-          return false;
+          debugLog("Price is not available" + a.fee_type);
+          return 2;
         }
       }
 
       if(filterByDate) {
-        if (b.date === getFormattedDateFormat()) {
-          isAvailableAfterFilter = true;
+        if (b.date === getFormattedDateFormat(0)) {
+          isAvailableAfterFilter = 1;
         } else {
-          console.log("Date is not available" + b.date);
-          return false;
+          debugLog("Date is not available" + b.date);
+          return 2;
         }
       }
 
       let filterByVaccine = filterBycovisheild || filterBycovaxin || filterBysputnikv;
       if(filterByVaccine) {
         if (filterBycovisheild && b.vaccine == "COVISHIELD") {
-          isAvailableAfterFilter = true;
+          isAvailableAfterFilter = 1;
         } else if (filterBycovaxin && b.vaccine == "COVAXIN") {
-          isAvailableAfterFilter = true;
+          isAvailableAfterFilter = 1;
         } else if (filterBysputnikv && b.vaccine == "SPUTNIK V") {
-          isAvailableAfterFilter = true;
+          isAvailableAfterFilter = 1;
         } else {
-          console.log("Vaccine is not avaiable" + b.vaccine)
-          return false;
+          debugLog("Vaccine is not avaiable" + b.vaccine)
+          return 2;
         }
       }
 
@@ -248,28 +295,30 @@
       if (filterByDose) {
         try {
           if (filterBydose1 && b.available_capacity_dose1 != 0) {
-            isAvailableAfterFilter = true;
+            isAvailableAfterFilter = 1;
           } else if (filterBydose2 && b.available_capacity_dose2 != 0) {
-            isAvailableAfterFilter = true;
+            isAvailableAfterFilter = 1;
           } else {
-            console.log("Dose is not available_capacity_dose1 =>" + b.available_capacity_dose1 + " 2=> " + b.available_capacity_dose2)
-            return false;
+            debugLog("Dose is not available_capacity_dose1 =>" + b.available_capacity_dose1 + " 2=> " + b.available_capacity_dose2)
+            return 2;
           }
         } catch (e) {
-          console.log(e);
-          console.log("ERROR IS HERE")
+          debugLog(e);
+          debugLog("ERROR IS HERE")
         }
       }
 
-      const filterByAge = filterByminage18 || filterByminage45;
+      const filterByAge = filterByminage18 || filterByminage40 || filterByminage45;
       if(filterByAge) {
-        if (filterByminage45 && b.min_age_limit <= 45) {
-          isAvailableAfterFilter = true;
-        } else if (filterByminage18 && b.min_age_limit <= 18) {
-          isAvailableAfterFilter =true;
+        if (filterByminage45 && b.min_age_limit == 45) {
+          isAvailableAfterFilter = 1;
+        } else if (filterByminage40 && b.min_age_limit == 40) {
+          isAvailableAfterFilter =1;
+        } else if (filterByminage18 && b.min_age_limit == 18) {
+          isAvailableAfterFilter =1;
         } else {
-          console.log("Age is not avaiable" + b.min_age_limit)
-          return false;
+          debugLog("Age is not avaiable" + b.min_age_limit)
+          return 2;
         }
       }
     }
@@ -278,12 +327,11 @@
 
 
   let firstTime = true;
-  let sessionIDs = [[],[],[],[],[],[]];//schedules_started, schedules_started_dose1, schedules_started_dose2, schedules_ended, schedules_ended_dose1, schedules_ended_dose2
   function registerNewAvailability(jsonResult) {
     const xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function () {
       if (this.readyState === 4 && this.status === 200) {
-        console.log(this.responseText);
+        debugLog(this.responseText);
       }
     };
     xhttp.open("POST", "/alertAvailable.php?refresh="+firstTime, true);
@@ -295,22 +343,39 @@
       firstTime = false;
     }
   }
-  function newResponse(jsonResult, sound, tracknew) {
+  function searchCentersFromList(name) {
+    for (let i = 0; i < searchCenters.length; i++) {
+      if(name.toLowerCase().includes(searchCenters[i].toLowerCase())) {
+        return true;
+      }
+    }
+    return searchCenters.length == 0;
+  }
+  function newResponse(jsonResult, sound, tracknew, weeknumber) {
     let isAvailable = false
     let available = [];
+    let availableFiltered = [];
     let notAvailable = [];
     jsonResult.centers.sort(function(a,b) {return (a.name > b.name)?1:-1;});
     jsonResult.centers.forEach(function (a) {
       a.sessions.forEach(function (b) {
           const isAvailableAfterFilter = applyFilter(b, a);
-          if (isAvailableAfterFilter) {
+          if (isAvailableAfterFilter == 1 && searchCentersFromList(a.name)) {
             available.push("<tr class='available'>     <td>" + a.name + "</td><td>" + b.date + "</td><td>" + b.available_capacity_dose1 + "</td><td>" + b.available_capacity_dose2 + "</td><td>" + b.vaccine + "</td><td>" + a.fee_type + "</td><td>" + b.min_age_limit + "</td><td><button onclick=window.open('https://selfregistration.cowin.gov.in','_blank')>Book now</button></td></tr>");
             if (sound) {
               playMusic();
               playSpecial();
             }
             isAvailable = true;
-            lastAvailableDetails = a.name + " - " + new Date();
+            lastAvailableDetailsNew[weeknumber] = a.name + " - " + (new Date().toLocaleString());
+          } else if (isAvailableAfterFilter == 1) {
+            if (nameListToIgnore.indexOf(a.name) === -1) {
+              availableFiltered.push("<tr class='available-filtered'><td>" + a.name + "</td><td>" + b.date + "</td><td>" + b.available_capacity_dose1 + "</td><td>" + b.available_capacity_dose2 + "</td><td>" + b.vaccine + "</td><td>" + a.fee_type + "</td><td>" + b.min_age_limit + "</td><td><button onclick='addToRemovedList(\"" + a.name + "\")'>Remove</button></td></tr>");
+            }
+          } else if (isAvailableAfterFilter == 2) {
+            if (nameListToIgnore.indexOf(a.name) === -1) {
+              availableFiltered.push("<tr class='available-filtered'><td>" + a.name + "</td><td>" + b.date + "</td><td>" + b.available_capacity_dose1 + "</td><td>" + b.available_capacity_dose2 + "</td><td>" + b.vaccine + "</td><td>" + a.fee_type + "</td><td>" + b.min_age_limit + "</td><td><button onclick='addToRemovedList(\"" + a.name + "\")'>Remove</button></td></tr>");
+            }
           } else {
             if (nameListToIgnore.indexOf(a.name) === -1) {
               notAvailable.push("<tr class='not-available'><td>" + a.name + "</td><td>" + b.date + "</td><td>" + b.available_capacity_dose1 + "</td><td>" + b.available_capacity_dose2 + "</td><td>" + b.vaccine + "</td><td>" + a.fee_type + "</td><td>" + b.min_age_limit + "</td><td><button onclick='addToRemovedList(\"" + a.name + "\")'>Remove</button></td></tr>");
@@ -319,8 +384,9 @@
       })
 
     })
-    table.available = available;
-    table.notAvailable = notAvailable;
+    tableNew[weeknumber].available = available;
+    tableNew[weeknumber].notAvailable = notAvailable;
+    tableNew[weeknumber].availableFiltered = availableFiltered;
     displayTable();
     if(sound) {
       play();
@@ -333,47 +399,67 @@
   }
 
   function displayTable() {
-    let tableHTML = "<table>" + table.header + table.available.join(" ");
-    if (filterByhide) {
-      tableHTML += table.notAvailable.join(" ");
+    let tableHTML = "<table>" + tableHeader.header;
+    for (var i = 0; i < daysNew; i++) {
+      tableHTML += tableNew[i].available.join(" ");
+    }
+    
+    if (filterByhide != 0) {
+      for (var i = 0; i < daysNew; i++) {
+        tableHTML += tableNew[i].availableFiltered.join(" ");
+      }
+    }
+    if (filterByhide == 2) {
+      for (var i = 0; i < daysNew; i++) {
+        tableHTML += tableNew[i].notAvailable.join(" ");
+      }
     }
     tableHTML += "</table>";
     document.getElementById("currentTable").innerHTML =  tableHTML;
   }
 
-  function sameResponse () {
+  function sameResponse (weeknumber) {
+// TODO for array colour
     document.bgColor = "#FFFFFF";
   }
 
   function loadDoc() {
+    for (var days_i = 0; days_i < daysNew; days_i++) {
+      loadDoc1(days_i);
+    }
+    retryCount++;
+    timer = setTimeout(loadDoc, timeOut)
+  }
+
+  function loadDoc1(weeknumber) {
     const xhttp = new XMLHttpRequest();
     xhttp.onreadystatechange = function () {
       if (this.readyState === 4 && this.status === 200) {
-        if (this.responseText === prevText) {
-          sameResponse();
+        if (this.responseText === prevTextNew[weeknumber]) {
+          sameResponse(weeknumber);
         } else {
-          prevText = this.responseText;
-          if (newResponse(JSON.parse(this.responseText), true, true)) {
+          prevTextNew[weeknumber] = this.responseText;
+          if (newResponse(JSON.parse(this.responseText), true, true, weeknumber)) {
             playCount = 5;
           }
         }
-        document.getElementById("demo").innerHTML = "Checked " + retryCount++ + " times. Last checked at "+ lastCheckedTime + ". Last available at "+ lastAvailableDetails ;
-        timer = setTimeout(loadDoc, timeOut)
+        document.getElementById("demo").innerHTML = "Checked " + retryCount + " times.";
+        for (var i = 0; i < daysNew; i++) {
+          document.getElementById("demo").innerHTML += "<br/>Week-" + (i+1) + " Last checked at "+ lastCheckedTimeNew[i] + ". Last available at "+ lastAvailableDetailsNew[i] ;
+        }
         if (playCount > 0) {
           playCount--;
           play();
         }
-      } else if (this.readyState === 4) {
-        timer = setTimeout(loadDoc, timeOut)
       }
     };
-    xhttp.open("GET", url, true);
+    xhttp.open("GET", urlNew[weeknumber], true);
     xhttp.send();
-    lastCheckedTime = (new Date()).toString();
+    lastCheckedTimeNew[weeknumber] = (new Date().toLocaleString());
   }
 
-  const audio1 = new Audio('https://bigsoundbank.com/UPLOAD/mp3/2255.mp3');
-  const audio2 = new Audio('https://bigsoundbank.com/UPLOAD/mp3/1928.mp3');
+  var audio1 = new Audio('https://bigsoundbank.com/UPLOAD/mp3/2255.mp3');
+  var audio2 = new Audio('https://bigsoundbank.com/UPLOAD/mp3/1928.mp3');
   function play() {
     audio1.play();
   }
@@ -395,6 +481,7 @@
     resetPlay();
   }
   function setDefault() {
+    initValues();
     document.getElementById("tablinks1").click();
     document.getElementById("tomorrow").value = getTomorrow();
   }
@@ -506,6 +593,9 @@
     background-color: gray;
     color: white;
   }
+  .available-filtered {
+    background-color: lightblue;
+  }
   .header {
     background-color: white;
   }
@@ -515,13 +605,13 @@
     font-weight: bold;
     border: 1px solid #002060;
     background-color: white;
-    width: 328px;
+    width: 331px;
     border-radius: 25px;
   }
   .tab button {
     font-weight: bold;
     margin-left: -20px;
-    border-radius: 25px;
+    border-radius: 20px;
     float: left;
     border: none;
     outline: none;
