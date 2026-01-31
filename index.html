@@ -1,691 +1,3704 @@
-<html lang="en_IN">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <title>Cowin Check Availability Alarm</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="icon" content="32.png">
-  <meta name="description" content="Check schedules for Cowin vaccination and free alerts in India">
-  <meta name="keywords" content="cowin, vaccination, india, covid19india, schedule">
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-P78MSSBKKF"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-P78MSSBKKF');
-  </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GEDCOM Family Tree Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Family Tree">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌳</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg-light: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            --graph-bg: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            --node-male: #cde4f9;
+            --node-female: #f9d5e5;
+            --node-unknown: #e8e8e8;
+            --edge-color: #94a3b8;
+        }
+        
+        /* Dark mode */
+        [data-theme="dark"] {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --secondary: #94a3b8;
+            --success: #34d399;
+            --danger: #f87171;
+            --warning: #fbbf24;
+            --bg-light: #0f172a;
+            --bg-card: #1e293b;
+            --border: #334155;
+            --text-dark: #f1f5f9;
+            --text-muted: #94a3b8;
+            --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.2);
+            --graph-bg: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            --node-male: #1e3a5f;
+            --node-female: #4a2c3d;
+            --node-unknown: #374151;
+            --edge-color: #64748b;
+        }
+        
+        /* Loading overlay */
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        #loading-overlay.active {
+            display: flex;
+        }
+        
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        body {
+            font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-light);
+            color: var(--text-dark);
+        }
+        
+        /* Graph container */
+        #graph-container {
+            position: relative;
+            flex-grow: 2;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #cy {
+            width: 100%;
+            height: 100%;
+            min-height: 60vh;
+            display: block;
+            background: var(--graph-bg);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        /* Floating graph controls */
+        .graph-controls {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .graph-controls-row {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 4px;
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .graph-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            color: var(--text-dark);
+        }
+        
+        .graph-btn:hover {
+            background: var(--bg-light);
+        }
+        
+        .graph-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .graph-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        @media (max-width: 767px) {
+            .graph-controls {
+                top: 8px;
+                left: 8px;
+            }
+            
+            .graph-controls-row {
+                padding: 3px;
+            }
+            
+            .graph-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 1rem;
+            }
+        }
+        
+        /* Sidebar panel */
+        #left {
+            width: 100%;
+            min-width: 280px;
+            background-color: var(--bg-card);
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+        
+        .header a {
+            font-size: 0.875rem;
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        .header a:hover {
+            text-decoration: underline;
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .btn-icon {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.15s ease;
+        }
+        
+        .btn-icon:hover {
+            background: var(--bg-light);
+            border-color: var(--primary);
+        }
+        
+        /* Button groups */
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        /* Buttons */
+        button, .btn {
+            padding: 8px 16px;
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #475569;
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--border);
+            color: var(--text-dark);
+        }
+        
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+        }
+        
+        .card-header {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        /* Form elements - Unified styling for all inputs */
+        input[type='text'],
+        input[type='number'],
+        input[type='date'],
+        input[type='tel'],
+        input[type='email'],
+        input[type='url'],
+        select,
+        textarea {
+            width: 100%;
+            height: 44px;
+            padding: 10px 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-light);
+            color: var(--text-dark);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            box-sizing: border-box;
+        }
+        
+        textarea {
+            height: auto;
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        input[type='text']:focus,
+        input[type='number']:focus,
+        input[type='date']:focus,
+        input[type='tel']:focus,
+        input[type='email']:focus,
+        input[type='url']:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        /* Placeholder styling */
+        input::placeholder,
+        textarea::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+        
+        input[type='text'].one_third {
+            width: 30%;
+        }
+        
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        
+        .form-group {
+            margin-bottom: 14px;
+        }
+        
+        .form-group label {
+            margin-bottom: 6px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        /* Navigation controls */
+        .nav-controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .nav-controls select {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .nav-controls input[type="number"] {
+            width: 70px;
+        }
+        
+        /* Zoom controls */
+        .zoom-controls {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .zoom-controls button {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        
+        /* Filter row - compact single line */
+        .filter-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        
+        .filter-row select {
+            flex: 1;
+            min-width: 0;
+            padding: 8px 6px;
+            font-size: 0.85rem;
+        }
+        
+        .filter-row .gen-input {
+            width: 50px;
+            padding: 8px 4px;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+        
+        .filter-row .btn-sm {
+            padding: 8px 10px;
+            min-width: 36px;
+        }
+        
+        /* Details list */
+        .familyNodeDetails {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .familyNodeDetails li {
+            margin-bottom: 8px;
+        }
+        
+        .familyNodeDetails ul {
+            margin-left: 16px;
+            border-left: 2px solid var(--border);
+            padding-left: 12px;
+        }
+        
+        /* Radio buttons */
+        .radio-group {
+            display: flex;
+            gap: 16px;
+            margin: 8px 0;
+            padding: 10px 12px;
+            background: var(--bg-light);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.9rem;
+            margin-bottom: 0;
+            color: var(--text-dark);
+        }
+        
+        .radio-group input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+        
+        /* Image preview */
+        .img-preview {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 8px;
+            box-shadow: var(--shadow);
+        }
+        
+        /* Person details tabs */
+        .person-tabs {
+            display: flex;
+            border-radius: 8px;
+            background: var(--bg-light);
+            padding: 4px;
+            margin-bottom: 12px;
+            gap: 4px;
+            overflow-x: auto;
+        }
+        
+        .person-tab {
+            flex: 1;
+            min-width: 0;
+            padding: 8px 6px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        
+        .person-tab:hover {
+            color: var(--text-dark);
+            background: var(--bg-card);
+        }
+        
+        .person-tab.active {
+            color: white;
+            background: var(--primary);
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+        }
+        
+        .person-tab-icon {
+            font-size: 1.1rem;
+        }
+        
+        /* Family members list */
+        .family-members-section {
+            background: var(--bg-light);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        
+        .family-members-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-dark);
+        }
+        
+        .family-members-header:hover {
+            background: var(--border);
+        }
+        
+        .family-members-toggle {
+            font-size: 1rem;
+            color: var(--text-muted);
+            transition: transform 0.2s ease;
+        }
+        
+        .family-members-section.open .family-members-toggle {
+            transform: rotate(180deg);
+        }
+        
+        .family-members-list {
+            display: none;
+            padding: 0 12px 12px;
+        }
+        
+        .family-members-section.open .family-members-list {
+            display: block;
+        }
+        
+        .family-member-group {
+            margin-bottom: 10px;
+        }
+        
+        .family-member-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        .family-member-group-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .family-member-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            background: var(--bg-card);
+            border-radius: 6px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-size: 0.85rem;
+        }
+        
+        .family-member-item:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .family-member-icon {
+            font-size: 1rem;
+        }
+        
+        .family-member-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .no-family-members {
+            color: var(--text-muted);
+            font-style: italic;
+            font-size: 0.85rem;
+            padding: 8px;
+            text-align: center;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Contact fields - with icon prefix */
+        .contact-field {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        
+        .contact-field-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        .contact-field input {
+            flex: 1;
+            min-width: 0;
+            padding-left: 40px; /* Make room for icon */
+        }
+        
+        /* Alive toggle */
+        .alive-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            height: 44px;
+            background: var(--success);
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 14px;
+            box-sizing: border-box;
+        }
+        
+        .alive-toggle.deceased {
+            background: var(--secondary);
+        }
+        
+        .alive-toggle input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: white;
+            cursor: pointer;
+        }
+        
+        .alive-toggle label {
+            color: white;
+            margin: 0;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+        
+        .death-fields {
+            display: none;
+            padding: 14px;
+            background: var(--bg-light);
+            border-radius: 8px;
+            margin-bottom: 14px;
+            border: 1px solid var(--border);
+        }
+        
+        .death-fields.visible {
+            display: block;
+        }
+        
+        .death-fields .form-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        /* Person header compact */
+        .person-header {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .person-photo {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+        
+        .person-photo-placeholder {
+            width: 60px;
+            height: 60px;
+            background: var(--bg-light);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+        
+        .person-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .person-name {
+            margin: 0 0 4px 0;
+            font-size: 1rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .person-id {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+        
+        /* Section dividers */
+        hr {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 16px 0;
+        }
+        
+        /* Placeholder text */
+        .placeholder-text {
+            color: var(--text-muted);
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        /* Hidden file input */
+        .file-input-hidden {
+            display: none;
+        }
+        
+        /* Mobile hamburger button - opens bottom sheet */
+        .hamburger-btn {
+            display: flex;
+            position: fixed;
+            bottom: 12px;
+            right: 12px;
+            z-index: 1000;
+            background: var(--primary);
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.2s ease;
+        }
+        
+        .hamburger-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.05);
+        }
+        
+        /* Sidebar backdrop for mobile */
+        #sidebar-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(2px);
+            z-index: 1001;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        body.sidebar-open #sidebar-backdrop {
+            display: block;
+            opacity: 1;
+        }
+        
+        /* Mobile bottom sheet */
+        @media (max-width: 767px) {
+            #graph-container {
+                width: 100%;
+                height: 75vh;
+                flex-grow: 0;
+            }
+            
+            #cy {
+                width: 100%;
+                height: 100%;
+                min-height: 75vh;
+            }
+            
+            #left {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                max-width: 100%;
+                height: 70vh;
+                max-height: 70vh;
+                transform: translateY(calc(100% - 25vh));
+                transition: transform 0.3s ease;
+                z-index: 1002;
+                box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+                border-radius: 20px 20px 0 0;
+                padding-top: 8px;
+            }
+            
+            /* Bottom sheet drag handle */
+            #left::before {
+                content: '';
+                position: absolute;
+                top: 8px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 40px;
+                height: 4px;
+                background: var(--border);
+                border-radius: 2px;
+            }
+            
+            body.sidebar-open #left {
+                transform: translateY(0);
+            }
+            
+            body.sidebar-open .hamburger-btn {
+                display: none;
+            }
+            
+            /* Hide header title on mobile to save space */
+            #left .header h1 {
+                font-size: 1.1rem;
+            }
+            
+            /* Reorder sections on mobile - selected person first */
+            #left {
+                display: flex;
+                flex-direction: column;
+            }
+            
+            #left .header {
+                order: 1;
+                margin-top: 8px;
+            }
+            
+            #selected-person-card {
+                order: 2;
+            }
+            
+            #left .sidebar-section:nth-of-type(1) { /* Search */
+                order: 3;
+            }
+            
+            #left .sidebar-section:nth-of-type(2) { /* File */
+                order: 5;
+            }
+            
+            #left .sidebar-section:nth-of-type(3) { /* Filter */
+                order: 4;
+            }
+            
+            #left details.collapsible-section { /* More Tools */
+                order: 6;
+            }
+        }
+        
+        /* Sidebar close button (mobile only) */
+        .sidebar-close-btn {
+            display: none;
+            background: transparent;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            color: var(--text-muted);
+            transition: color 0.15s ease;
+        }
+        
+        .sidebar-close-btn:hover {
+            color: var(--danger);
+        }
+        
+        @media (max-width: 767px) {
+            .sidebar-close-btn {
+                display: block;
+            }
+        }
+        
+        /* Section styles */
+        .sidebar-section {
+            margin-bottom: 16px;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .section-header span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        /* Dropdown menu styles */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .dropdown-toggle::after {
+            content: '▼';
+            font-size: 0.6rem;
+            margin-left: 2px;
+        }
+        
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            min-width: 160px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-shadow: var(--shadow-lg);
+            z-index: 100;
+            overflow: hidden;
+            margin-top: 0;
+            padding-top: 4px;
+        }
+        
+        /* Invisible bridge to prevent gap hover issue */
+        .dropdown::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background: transparent;
+        }
+        
+        .dropdown:hover .dropdown-menu,
+        .dropdown.open .dropdown-menu {
+            display: block;
+        }
+        
+        .dropdown-menu a,
+        .dropdown-menu button {
+            display: block;
+            width: 100%;
+            padding: 10px 14px;
+            text-align: left;
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            color: var(--text-dark);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        
+        .dropdown-menu a:hover,
+        .dropdown-menu button:hover {
+            background: var(--bg-light);
+        }
+        
+        /* Details/Summary for collapsible sections */
+        details.collapsible-section {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            background: var(--bg-light);
+        }
+        
+        details.collapsible-section summary {
+            padding: 12px 14px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        details.collapsible-section summary::-webkit-details-marker {
+            display: none;
+        }
+        
+        details.collapsible-section summary::after {
+            content: '+';
+            font-size: 1.2rem;
+            font-weight: 400;
+            color: var(--secondary);
+        }
+        
+        details.collapsible-section[open] summary::after {
+            content: '−';
+        }
+        
+        details.collapsible-section .details-content {
+            padding: 0 14px 14px;
+        }
+        
+        /* Selected person card - hidden by default */
+        #selected-person-card {
+            display: none;
+            animation: slideIn 0.2s ease;
+        }
+        
+        #selected-person-card.visible {
+            display: block;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Compact button grid */
+        .compact-btn-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+        }
+        
+        .compact-btn-grid .btn-sm {
+            justify-content: center;
+            padding: 8px 6px;
+            font-size: 0.75rem;
+        }
+        
+        /* Peek content on mobile when sheet is minimized */
+        @media (max-width: 767px) {
+            #left .header {
+                padding-top: 12px;
+            }
+            
+            /* Quick actions bar visible when sheet is minimized */
+            .mobile-quick-bar {
+                display: flex;
+                gap: 8px;
+                padding: 8px 16px;
+                background: var(--bg-card);
+                border-bottom: 1px solid var(--border);
+            }
+            
+            /* Smaller buttons on mobile */
+            .sidebar-section .btn-group {
+                flex-wrap: wrap;
+            }
+            
+            .sidebar-section .btn-sm {
+                padding: 8px 10px;
+                font-size: 0.75rem;
+            }
+            
+            /* Compact form elements on mobile */
+            .form-group {
+                margin-bottom: 8px;
+            }
+            
+            input[type='text'],
+            input[type='number'],
+            select {
+                padding: 8px 10px;
+                font-size: 0.85rem;
+            }
+        }
+        
+        /* Desktop layout */
+        @media (min-width: 768px) {
+            .hamburger-btn {
+                display: none;
+            }
+            body {
+                flex-direction: row;
+            }
+            
+            #graph-container {
+                width: 70%;
+                height: 100vh;
+            }
+            
+            #cy {
+                height: 100%;
+                min-height: 100vh;
+                border-bottom: none;
+                border-right: 1px solid var(--border);
+            }
+            
+            #left {
+                width: 30%;
+                max-width: 400px;
+                height: 100vh;
+            }
+        }
+        
+        /* Scrollbar styling */
+        #left::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #left::-webkit-scrollbar-track {
+            background: var(--bg-light);
+        }
+        
+        #left::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+        
+        #left::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary);
+        }
+        
+        /* Modal styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--bg-card);
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: var(--text-dark);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0;
+            line-height: 1;
+        }
+        
+        .modal-close:hover {
+            color: var(--danger);
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        /* Shortcuts modal */
+        .shortcuts-modal {
+            width: 400px;
+        }
+        
+        .shortcuts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--bg-light);
+            border-radius: 6px;
+        }
+        
+        .shortcut-item kbd {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--text-dark);
+        }
+        
+        .shortcut-item span {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        
+        /* Search styles */
+        .search-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .search-container input {
+            padding-right: 32px;
+        }
+        
+        .search-clear {
+            position: absolute;
+            right: 8px;
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+        
+        .search-clear:hover {
+            color: var(--danger);
+        }
+        
+        .search-results {
+            display: none;
+            margin-top: 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .search-result-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .search-result-item:hover {
+            background: var(--bg-light);
+        }
+        
+        .search-result-name {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        .search-result-id {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .search-no-results {
+            padding: 12px;
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+        
+        .search-more {
+            padding: 8px 12px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            background: var(--bg-light);
+        }
+        
+        /* Statistics styles */
+        .statistics-modal {
+            width: 450px;
+            max-width: 95%;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: var(--bg-light);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .stat-card.male {
+            background: #cde4f9;
+        }
+        
+        .stat-card.female {
+            background: #f9d5e5;
+        }
+        
+        [data-theme="dark"] .stat-card.male {
+            background: #1e3a5f;
+        }
+        
+        [data-theme="dark"] .stat-card.female {
+            background: #4a2c3d;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        
+        .stats-section {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .stats-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .stats-section h3 {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+        }
+        
+        .stats-row span {
+            color: var(--text-muted);
+        }
+        
+        .stats-row strong {
+            color: var(--text-dark);
+        }
+        
+        .stats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .stats-list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 10px;
+            background: var(--bg-light);
+            border-radius: 4px;
+        }
+        
+        .stats-count {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        /* Duplicates styles */
+        .duplicates-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .duplicate-item {
+            background: var(--bg-light);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        
+        .duplicate-header {
+            margin-bottom: 8px;
+        }
+        
+        .duplicate-score {
+            background: var(--warning);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .duplicate-persons {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .duplicate-person {
+            flex: 1;
+            padding: 8px;
+            background: var(--bg-card);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        
+        .duplicate-person:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .duplicate-person strong {
+            display: block;
+        }
+        
+        .duplicate-person small {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+        
+        .duplicate-person:hover small {
+            color: rgba(255,255,255,0.8);
+        }
+        
+        .duplicate-vs {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+        
+        /* Timeline styles */
+        .timeline-summary {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: var(--bg-light);
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        
+        .timeline {
+            position: relative;
+        }
+        
+        .timeline-decade {
+            margin-bottom: 16px;
+        }
+        
+        .timeline-decade-label {
+            font-weight: 700;
+            color: var(--primary);
+            padding: 4px 12px;
+            background: var(--bg-light);
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+        
+        .timeline-events {
+            border-left: 2px solid var(--border);
+            margin-left: 8px;
+            padding-left: 16px;
+        }
+        
+        .timeline-event {
+            display: flex;
+            gap: 12px;
+            padding: 8px 12px;
+            margin-bottom: 4px;
+            background: var(--bg-card);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        
+        .timeline-event:hover {
+            background: var(--bg-light);
+            transform: translateX(4px);
+        }
+        
+        .timeline-icon {
+            font-size: 1.2rem;
+        }
+        
+        .timeline-event-date {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        
+        .timeline-event-title {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        .timeline-event-place {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        
+        /* Relationship styles */
+        .rel-select {
+            width: 100%;
+        }
+        
+        .relationship-result {
+            text-align: center;
+            padding: 16px;
+            background: var(--bg-light);
+            border-radius: 8px;
+        }
+        
+        .rel-badge {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+        
+        .rel-path {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .rel-step {
+            background: var(--bg-card);
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        
+        .rel-step:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .rel-arrow {
+            color: var(--text-muted);
+        }
+        
+        /* Print styles */
+        @media print {
+            body {
+                background: white !important;
+            }
+            
+            #left, .header, .modal-overlay, #loading-overlay {
+                display: none !important;
+            }
+            
+            #cy {
+                width: 100% !important;
+                height: 100vh !important;
+                border: none !important;
+                background: white !important;
+            }
+        }
+        
+        /* Share modal styles */
+        .share-input {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .share-input input {
+            flex: 1;
+        }
+        
+        .share-input button {
+            white-space: nowrap;
+        }
+        
+        .embed-code {
+            background: var(--bg-light);
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+        }
+        
+        /* Crop Modal Styles */
+        .crop-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background: #1a1a1a;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .crop-image {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+        
+        .crop-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+        
+        .crop-box {
+            position: absolute;
+            border: 3px solid #fff;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+            cursor: move;
+            pointer-events: auto;
+            border-radius: 4px;
+        }
+        
+        .crop-box::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 2px dashed rgba(255,255,255,0.5);
+            border-radius: 50%;
+        }
+        
+        /* Crop box resize handles */
+        .crop-handle {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border: 2px solid var(--primary);
+            border-radius: 50%;
+            pointer-events: auto;
+        }
+        
+        .crop-handle.nw { top: -8px; left: -8px; cursor: nw-resize; }
+        .crop-handle.ne { top: -8px; right: -8px; cursor: ne-resize; }
+        .crop-handle.sw { bottom: -8px; left: -8px; cursor: sw-resize; }
+        .crop-handle.se { bottom: -8px; right: -8px; cursor: se-resize; }
+        
+        .crop-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: var(--bg-light);
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        
+        .crop-size {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        .crop-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .crop-actions button {
+            flex: 1;
+        }
+        
+        .crop-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid var(--border);
+            background: var(--bg-light);
+        }
+        
+        .crop-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    </style>
 </head>
 <body>
-<div class="header2"><img class="menu1" src="128.png" height="40px" width="40px" alt="Cowin19.GA"><div class="menu1">Cowin Schedule Checker</div><div class="menu"><a class="headerlink" href="https://forms.gle/PQntwjJDiUc6Q7mG8" target="_blank">Feedback</a></div></div>
-<h1>Check your nearest vaccination center and slots availability</h1>
-<div class="tab" onclick="toggleTab()">
-  <button class="tablinks1" id="tablinks1">Search By PIN</button>
-  <button class="tablinks2" id="tablinks2">Search By District</button>
-</div>
-<div id="Paris" class="tabcontent">
-  <label for="states">State state</label><select id="states" onchange="changeState(this)"><option value="">Select a state</option><option value="1">Andaman and Nicobar Islands</option><option value="2">Andhra Pradesh</option><option value="3">Arunachal Pradesh</option><option value="4">Assam</option><option value="5">Bihar</option><option value="6">Chandigarh</option><option value="7">Chhattisgarh</option><option value="8">Dadra and Nagar Haveli</option><option value="37">Daman and Diu</option><option value="9">Delhi</option><option value="10">Goa</option><option value="11">Gujarat</option><option value="12">Haryana</option><option value="13">Himachal Pradesh</option><option value="14">Jammu and Kashmir</option><option value="15">Jharkhand</option><option value="16">Karnataka</option><option value="17">Kerala</option><option value="18">Ladakh</option><option value="19">Lakshadweep</option><option value="20">Madhya Pradesh</option><option value="21">Maharashtra</option><option value="22">Manipur</option><option value="23">Meghalaya</option><option value="24">Mizoram</option><option value="25">Nagaland</option><option value="26">Odisha</option><option value="27">Puducherry</option><option value="28">Punjab</option><option value="29">Rajasthan</option><option value="30">Sikkim</option><option value="31">Tamil Nadu</option><option value="32">Telangana</option><option value="33">Tripura</option><option value="34">Uttar Pradesh</option><option value="35">Uttarakhand</option><option value="36">West Bengal</option></select>
-  <label for="districtID">Select district</label><select id="districtID"></select>
-</div>
-<div id="London" class="tabcontent">
-  <label for="pincode">Enter PIN</label><input class="input" type="number" id="pincode" placeholder="Enter Your PIN">
-</div>
-<label for="tomorrow">Date</label>  <input class="input" type="date" onchange="changeURL()" id="tomorrow">
-<input class="input" type="hidden" id="timeout" value="10">
-<div class="actions">
-  <button class="action" title="Start monitoring" onclick="startChecking()" type="button">Start monitoring</button>
-  <button class="action" title="Stop monitoring" onclick="stopAll()" type="button">Stop monitoring</button>
-  <button class="action" onclick="location.reload()" type="button">Reset All</button>
-  <button class="action" onclick="resetPlay()" type="button">Stop Sound</button>
-</div>
-<br/>
-<div class="action" id="advancedOptions">Advanced Options ►</div>
-<br/>
-<div class="content" id="advancedOptionsContent">
-    <button class="action" onclick="playMusic()" type="button">Test Sound</button>
-</div>
-<script>
-  document.getElementById("advancedOptions").addEventListener("click", function() {
-    this.classList.toggle("active");
-    const content = document.getElementById("advancedOptionsContent");
-    if (content.style.maxHeight) {
-      content.style.maxHeight = null;
-      document.getElementById("advancedOptions").innerText = "Advanced Options ►";
-    } else {
-      content.style.maxHeight = content.scrollHeight + "px";
-      document.getElementById("advancedOptions").innerText = "Advanced Options ▼";
-    }
-  });
-</script>
-<div id="demo" class="status">
-  <h3>Monitoring not started</h3>
-</div>
-<hr/>
-<br/>
-<h3>Current status</h3>
-<div class="filters">
-  <button class="filter_value" onclick="changeFilters1(this)" id=dateCheckBox ><span id="dateForCheckBox">Tomorrow</span></button>
-  <button class="filter_value" onclick="changeFilters1(this)" id=covisheild >Covisheild </button>
-  <button class="filter_value" onclick="changeFilters1(this)" id=covaxin >Covaxin </button>
-  <button class="filter_value" onclick="changeFilters1(this)" id=sputnikv >Sputnik V </button>
-  <button class="filter_value" onclick="changeFilters1(this)" id=minage18 >18+ </button>
-  <button class="filter_value" onclick="changeFilters1(this)" id=minage40 >40+ </button>
-  <button class="filter_value" onclick="changeFilters1(this)" id=minage45 >45+ </button>
-  <button class="filter_value" onclick="changeFilters1(this)" id=dose1 >Dose 1 </button>
-  <button class="filter_value" onclick="changeFilters1(this)" id=dose2 >Dose 2 </button>
-  <button class="filter_value" onclick="changeFilters1(this)" id=paid >Paid </button>
-  <button class="filter_value" onclick="changeFilters1(this)" id=free >Free </button>
-  <button class="filter_value" onclick="changeFilters1(this)" id=hide >Show All</button>
-</div>
-<label for="searchcenters">Filter centers by Name</label><input onchange="filterSearchCenters()" class="input" type="text" id="searchcenters" placeholder="comma separated center names">
-<br/>
-<div id="currentTable" class="status">
-  &nbsp; Empty
-</div>
-<hr/>
-<script>
-  let debug = false;
-  let daysNew = 4;
-  let retryCount = 0;
-  let prevTextNew = [];
-  let urlNew = [];
-  let playCount = 1;
-  let lastCheckedTimeNew = [];
-  let lastAvailableDetailsNew = [];
-  let timeOut = 10;
-  let timer = 0;
-  let nameListToIgnore = [];
-  let filterByDate = false;
-  let filterBycovisheild = false;
-  let filterBycovaxin = false;
-  let filterBysputnikv = false;
-  let filterByminage18 = false;
-  let filterByminage40 = false;
-  let filterByminage45 = false;
-  let filterBydose1 = false;
-  let filterBydose2 = false;
-  let filterBypaid = false;
-  let filterByfree = false;
-  let filterByhide = 0;
-  let tableHeader = {
-    "header": "<tr class='header'><td>" + "Vaccination Centre" + "</td><td>" + "Date" + "</td><td>" + "Available Dose 1" + "</td><td>" + "Available Dose 2" + "</td><td>" + "Vaccine" +"</td><td>" + "Fee type" +"</td><td>" + "Age min" + "</td></tr>"
-  }
-  let tableNew = [];
-  let searchCenters =  [];
-  let isDistrictElsePIN = true;
+<script type="module">
+    import { startDraw, zoomIn, zoomOut, fitToScreen, relayoutNodes, setFocusPerson, setMaxGenerations, clearFilter, getAllIndividuals, setNodeClickCallback, expandFromPerson, updateAllNodesData, refreshStyles, searchPersons, centerOnSearchResult, clearSearch, downloadPng, downloadSvg, calculateStatistics, findDuplicates, toggleDragMode, isDragEnabled, calculateRelationship } from './js/diagram.js';
+    import { extractEvents, generateTimelineHTML } from './js/timeline.js';
+    import { handleGedComFileSelect as importGedComFile, importGedComText } from './js/gedcom_import.js';
+    import { importCSVFile, getExpectedColumns } from './js/csv_import.js';
+    import { addNewNode, handleNodeValueChange, handleNodeValueWithNewNode, deleteNode, handleImgFileSelect } from './js/gedcom_edit.js';
+    import { gedcomExport, createFileContent, exportToJSON } from './js/gedcom_export.js';
+    import { initShortcuts, registerAction, showShortcutsHelp } from './js/shortcuts.js';
+    import { saveSnapshot, undo, redo, canUndo, canRedo, addStateListener } from './js/state2.js';
 
-  function initValues () {
-    for (var days_i = 0; days_i < daysNew; days_i++) {
-      prevTextNew[days_i] = "{\"centers\":[]}";
-      lastCheckedTimeNew[days_i] = "NA";
-      lastAvailableDetailsNew[days_i] = "NA";
-      tableNew [days_i] = {
-        "available": [],
-        "notAvailable": [],
-        "availableFiltered": []
-      }
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(registration => {
+                    console.log('SW registered:', registration.scope);
+                })
+                .catch(err => {
+                    console.log('SW registration failed:', err);
+                });
+        });
     }
-  }
-  function debugLog(str) {
-    if (debug) {
-      console.log(str);
-    }
-  }
-  function filterSearchCenters() {
-    let searchcentersVal = document.getElementById("searchcenters").value;
-    searchCenters = searchcentersVal.split(",").map(function (x1){return x1.trim()}).filter(function (x2){return x2.length>0});
-    for (var i = 0; i < daysNew; i++) {
-      newResponse(JSON.parse(prevTextNew[i]), false, false, i);
-    }
-  }
-  function changeFilters1(param) {
-    switch (param.id) {
-      case "dateCheckBox":
-        filterByDate = !filterByDate;
-        break;
-      case "covisheild":
-        filterBycovisheild = !filterBycovisheild;
-        break;
-      case "covaxin":
-        filterBycovaxin = !filterBycovaxin;
-        break;
-      case "sputnikv" :
-        filterBysputnikv = !filterBysputnikv;
-        break;
-      case "minage18":
-        filterByminage18 = !filterByminage18;
-        break;
-      case "minage40":
-        filterByminage40 = !filterByminage40;
-        break;
-      case "minage45":
-        filterByminage45 = !filterByminage45;
-        break;
-      case "dose1":
-        filterBydose1 = !filterBydose1;
-        break;
-      case "dose2":
-        filterBydose2 = !filterBydose2;
-        break;
-      case "paid":
-        filterBypaid = !filterBypaid;
-        break;
-      case "free":
-        filterByfree = !filterByfree;
-        break;
-      case "hide":
-        filterByhide = (filterByhide+1)%3;
-        break;
-    }
-    for (var i = 0; i < daysNew; i++) {
-      newResponse(JSON.parse(prevTextNew[i]), false, false, i);
-    }
-    param.classList.toggle("selected");
-  }
-  function changeState (select) {
-    const districts = [[["Nicobar","3"],["North and Middle Andaman","1"],["South Andaman","2"]],[["Anantapur","9"],["Chittoor","10"],["East Godavari","11"],["Guntur","5"],["Krishna","4"],["Kurnool","7"],["Prakasam","12"],["Sri Potti Sriramulu Nellore","13"],["Srikakulam","14"],["Visakhapatnam","8"],["Vizianagaram","15"],["West Godavari","16"],["YSR District, Kadapa (Cuddapah)","6"]],[["Anjaw","22"],["Changlang","20"],["Dibang Valley","25"],["East Kameng","23"],["East Siang","42"],["Itanagar Capital Complex","17"],["Kamle","24"],["Kra Daadi","27"],["Kurung Kumey","21"],["Lepa Rada","33"],["Lohit","29"],["Longding","40"],["Lower Dibang Valley","31"],["Lower Siang","18"],["Lower Subansiri","32"],["Namsai","36"],["Pakke Kessang","19"],["Papum Pare","39"],["Shi Yomi","35"],["Siang","37"],["Tawang","30"],["Tirap","26"],["Upper Siang","34"],["Upper Subansiri","41"],["West Kameng","28"],["West Siang","38"]],[["Baksa","46"],["Barpeta","47"],["Biswanath","765"],["Bongaigaon","57"],["Cachar","66"],["Charaideo","766"],["Chirang","58"],["Darrang","48"],["Dhemaji","62"],["Dhubri","59"],["Dibrugarh","43"],["Dima Hasao","67"],["Goalpara","60"],["Golaghat","53"],["Hailakandi","68"],["Hojai","764"],["Jorhat","54"],["Kamrup Metropolitan","49"],["Kamrup Rural","50"],["Karbi-Anglong","51"],["Karimganj","69"],["Kokrajhar","61"],["Lakhimpur","63"],["Majuli","767"],["Morigaon","55"],["Nagaon","56"],["Nalbari","52"],["Sivasagar","44"],["Sonitpur","64"],["South Salmara Mankachar","768"],["Tinsukia","45"],["Udalguri","65"],["West Karbi Anglong","769"]],[["Araria","74"],["Arwal","78"],["Aurangabad","77"],["Banka","83"],["Begusarai","98"],["Bhagalpur","82"],["Bhojpur","99"],["Buxar","100"],["Darbhanga","94"],["East Champaran","105"],["Gaya","79"],["Gopalganj","104"],["Jamui","107"],["Jehanabad","91"],["Kaimur","80"],["Katihar","75"],["Khagaria","101"],["Kishanganj","76"],["Lakhisarai","84"],["Madhepura","70"],["Madhubani","95"],["Munger","85"],["Muzaffarpur","86"],["Nalanda","90"],["Nawada","92"],["Patna","97"],["Purnia","73"],["Rohtas","81"],["Saharsa","71"],["Samastipur","96"],["Saran","102"],["Sheikhpura","93"],["Sheohar","87"],["Sitamarhi","88"],["Siwan","103"],["Supaul","72"],["Vaishali","89"],["West Champaran","106"]],[["Chandigarh","108"]],[["Balod","110"],["Baloda bazar","111"],["Balrampur","112"],["Bastar","113"],["Bemetara","114"],["Bijapur","115"],["Bilaspur","116"],["Dantewada","117"],["Dhamtari","118"],["Durg","119"],["Gariaband","120"],["Gaurela Pendra Marwahi ","136"],["Janjgir-Champa","121"],["Jashpur","122"],["Kanker","123"],["Kawardha","135"],["Kondagaon","124"],["Korba","125"],["Koriya","126"],["Mahasamund","127"],["Mungeli","128"],["Narayanpur","129"],["Raigarh","130"],["Raipur","109"],["Rajnandgaon","131"],["Sukma","132"],["Surajpur","133"],["Surguja","134"]],[["Dadra and Nagar Haveli","137"]],[["Central Delhi","141"],["East Delhi","145"],["New Delhi","140"],["North Delhi","146"],["North East Delhi","147"],["North West Delhi","143"],["Shahdara","148"],["South Delhi","149"],["South East Delhi","144"],["South West Delhi","150"],["West Delhi","142"]],[["North Goa","151"],["South Goa","152"]],[["Ahmedabad","154"],["Ahmedabad Corporation","770"],["Amreli","174"],["Anand","179"],["Aravalli","158"],["Banaskantha","159"],["Bharuch","180"],["Bhavnagar","175"],["Bhavnagar Corporation","771"],["Botad","176"],["Chhotaudepur","181"],["Dahod","182"],["Dang","163"],["Devbhumi Dwaraka","168"],["Gandhinagar","153"],["Gandhinagar Corporation","772"],["Gir Somnath","177"],["Jamnagar","169"],["Jamnagar Corporation","773"],["Junagadh","178"],["Junagadh Corporation","774"],["Kheda","156"],["Kutch","170"],["Mahisagar","183"],["Mehsana","160"],["Morbi","171"],["Narmada","184"],["Navsari","164"],["Panchmahal","185"],["Patan","161"],["Porbandar","172"],["Rajkot","173"],["Rajkot Corporation","775"],["Sabarkantha","162"],["Surat","165"],["Surat Corporation","776"],["Surendranagar","157"],["Tapi","166"],["Vadodara","155"],["Vadodara Corporation","777"],["Valsad","167"]],[["Ambala","193"],["Bhiwani","200"],["Charkhi Dadri","201"],["Faridabad","199"],["Fatehabad","196"],["Gurgaon","188"],["Hisar","191"],["Jhajjar","189"],["Jind","204"],["Kaithal","190"],["Karnal","203"],["Kurukshetra","186"],["Mahendragarh","206"],["Nuh","205"],["Palwal","207"],["Panchkula","187"],["Panipat","195"],["Rewari","202"],["Rohtak","192"],["Sirsa","194"],["Sonipat","198"],["Yamunanagar","197"]],[["Bilaspur","219"],["Chamba","214"],["Hamirpur","217"],["Kangra","213"],["Kinnaur","216"],["Kullu","211"],["Lahaul Spiti","210"],["Mandi","215"],["Shimla","208"],["Sirmaur","212"],["Solan","209"],["Una","218"]],[["Anantnag","224"],["Bandipore","223"],["Baramulla","225"],["Budgam","229"],["Doda","232"],["Ganderbal","228"],["Jammu","230"],["Kathua","234"],["Kishtwar","231"],["Kulgam","221"],["Kupwara","226"],["Poonch","238"],["Pulwama","227"],["Rajouri","237"],["Ramban","235"],["Reasi","239"],["Samba","236"],["Shopian","222"],["Srinagar","220"],["Udhampur","233"]],[["Bokaro","242"],["Chatra","245"],["Deoghar","253"],["Dhanbad","257"],["Dumka","258"],["East Singhbhum","247"],["Garhwa","243"],["Giridih","256"],["Godda","262"],["Gumla","251"],["Hazaribagh","255"],["Jamtara","259"],["Khunti","252"],["Koderma","241"],["Latehar","244"],["Lohardaga","250"],["Pakur","261"],["Palamu","246"],["Ramgarh","254"],["Ranchi","240"],["Sahebganj","260"],["Seraikela Kharsawan","248"],["Simdega","249"],["West Singhbhum","263"]],[["Bagalkot","270"],["Bangalore Rural","276"],["Bangalore Urban","265"],["BBMP","294"],["Belgaum","264"],["Bellary","274"],["Bidar","272"],["Chamarajanagar","271"],["Chikamagalur","273"],["Chikkaballapur","291"],["Chitradurga","268"],["Dakshina Kannada","269"],["Davanagere","275"],["Dharwad","278"],["Gadag","280"],["Gulbarga","267"],["Hassan","289"],["Haveri","279"],["Kodagu","283"],["Kolar","277"],["Koppal","282"],["Mandya","290"],["Mysore","266"],["Raichur","284"],["Ramanagara","292"],["Shimoga","287"],["Tumkur","288"],["Udupi","286"],["Uttar Kannada","281"],["Vijayapura","293"],["Yadgir","285"]],[["Alappuzha","301"],["Ernakulam","307"],["Idukki","306"],["Kannur","297"],["Kasaragod","295"],["Kollam","298"],["Kottayam","304"],["Kozhikode","305"],["Malappuram","302"],["Palakkad","308"],["Pathanamthitta","300"],["Thiruvananthapuram","296"],["Thrissur","303"],["Wayanad","299"]],[["Kargil","309"],["Leh","310"]],[["Agatti Island","796"],["Lakshadweep","311"]],[["Agar","320"],["Alirajpur","357"],["Anuppur","334"],["Ashoknagar","354"],["Balaghat","338"],["Barwani","343"],["Betul","362"],["Bhind","351"],["Bhopal","312"],["Burhanpur","342"],["Chhatarpur","328"],["Chhindwara","337"],["Damoh","327"],["Datia","350"],["Dewas","324"],["Dhar","341"],["Dindori","336"],["Guna","348"],["Gwalior","313"],["Harda","361"],["Hoshangabad","360"],["Indore","314"],["Jabalpur","315"],["Jhabua","340"],["Katni","353"],["Khandwa","339"],["Khargone","344"],["Mandla","335"],["Mandsaur","319"],["Morena","347"],["Narsinghpur","352"],["Neemuch","323"],["Panna","326"],["Raisen","359"],["Rajgarh","358"],["Ratlam","322"],["Rewa","316"],["Sagar","317"],["Satna","333"],["Sehore","356"],["Seoni","349"],["Shahdol","332"],["Shajapur","321"],["Sheopur","346"],["Shivpuri","345"],["Sidhi","331"],["Singrauli","330"],["Tikamgarh","325"],["Ujjain","318"],["Umaria","329"],["Vidisha","355"]],[["Ahmednagar","391"],["Akola","364"],["Amravati","366"],["Aurangabad ","397"],["Beed","384"],["Bhandara","370"],["Buldhana","367"],["Chandrapur","380"],["Dhule","388"],["Gadchiroli","379"],["Gondia","378"],["Hingoli","386"],["Jalgaon","390"],["Jalna","396"],["Kolhapur","371"],["Latur","383"],["Mumbai","395"],["Nagpur","365"],["Nanded","382"],["Nandurbar","387"],["Nashik","389"],["Osmanabad","381"],["Palghar","394"],["Parbhani","385"],["Pune","363"],["Raigad","393"],["Ratnagiri","372"],["Sangli","373"],["Satara","376"],["Sindhudurg","374"],["Solapur","375"],["Thane","392"],["Wardha","377"],["Washim","369"],["Yavatmal","368"]],[["Bishnupur","398"],["Chandel","399"],["Churachandpur","400"],["Imphal East","401"],["Imphal West","402"],["Jiribam","410"],["Kakching","413"],["Kamjong","409"],["Kangpokpi","408"],["Noney","412"],["Pherzawl","411"],["Senapati","403"],["Tamenglong","404"],["Tengnoupal","407"],["Thoubal","405"],["Ukhrul","406"]],[["East Garo Hills","424"],["East Jaintia Hills","418"],["East Khasi Hills","414"],["North Garo Hills","423"],["Ri-Bhoi","417"],["South Garo Hills","421"],["South West Garo Hills","422"],["South West Khasi Hills","415"],["West Garo Hills","420"],["West Jaintia Hills","416"],["West Khasi Hills","419"]],[["Aizawl East","425"],["Aizawl West","426"],["Champhai","429"],["Kolasib","428"],["Lawngtlai","432"],["Lunglei","431"],["Mamit","427"],["Serchhip","430"],["Siaha","433"]],[["Dimapur","434"],["Kiphire","444"],["Kohima","441"],["Longleng","438"],["Mokokchung","437"],["Mon","439"],["Peren","435"],["Phek","443"],["Tuensang","440"],["Wokha","436"],["Zunheboto","442"]],[["Angul","445"],["Balangir","448"],["Balasore","447"],["Bargarh","472"],["Bhadrak","454"],["Boudh","468"],["Cuttack","457"],["Deogarh","473"],["Dhenkanal","458"],["Gajapati","467"],["Ganjam","449"],["Jagatsinghpur","459"],["Jajpur","460"],["Jharsuguda","474"],["Kalahandi","464"],["Kandhamal","450"],["Kendrapara","461"],["Kendujhar","455"],["Khurda","446"],["Koraput","451"],["Malkangiri","469"],["Mayurbhanj","456"],["Nabarangpur","470"],["Nayagarh","462"],["Nuapada","465"],["Puri","463"],["Rayagada","471"],["Sambalpur","452"],["Subarnapur","466"],["Sundargarh","453"]],[["Karaikal","476"],["Mahe","477"],["Puducherry","475"],["Yanam","478"]],[["Amritsar","485"],["Barnala","483"],["Bathinda","493"],["Faridkot","499"],["Fatehgarh Sahib","484"],["Fazilka","487"],["Ferozpur","480"],["Gurdaspur","489"],["Hoshiarpur","481"],["Jalandhar","492"],["Kapurthala","479"],["Ludhiana","488"],["Mansa","482"],["Moga","491"],["Pathankot","486"],["Patiala","494"],["Rup Nagar","497"],["Sangrur","498"],["SAS Nagar","496"],["SBS Nagar","500"],["Sri Muktsar Sahib","490"],["Tarn Taran","495"]],[["Ajmer","507"],["Alwar","512"],["Banswara","519"],["Baran","516"],["Barmer","528"],["Bharatpur","508"],["Bhilwara","523"],["Bikaner","501"],["Bundi","514"],["Chittorgarh","521"],["Churu","530"],["Dausa","511"],["Dholpur","524"],["Dungarpur","520"],["Hanumangarh","517"],["Jaipur I","505"],["Jaipur II","506"],["Jaisalmer","527"],["Jalore","533"],["Jhalawar","515"],["Jhunjhunu","510"],["Jodhpur","502"],["Karauli","525"],["Kota","503"],["Nagaur","532"],["Pali","529"],["Pratapgarh","522"],["Rajsamand","518"],["Sawai Madhopur","534"],["Sikar","513"],["Sirohi","531"],["Sri Ganganagar","509"],["Tonk","526"],["Udaipur","504"]],[["East Sikkim","535"],["North Sikkim","537"],["South Sikkim","538"],["West Sikkim","536"]],[["Aranthangi","779"],["Ariyalur","555"],["Attur","578"],["Chengalpet","565"],["Chennai","571"],["Cheyyar","778"],["Coimbatore","539"],["Cuddalore","547"],["Dharmapuri","566"],["Dindigul","556"],["Erode","563"],["Kallakurichi","552"],["Kanchipuram","557"],["Kanyakumari","544"],["Karur","559"],["Kovilpatti","780"],["Krishnagiri","562"],["Madurai","540"],["Nagapattinam","576"],["Namakkal","558"],["Nilgiris","577"],["Palani","564"],["Paramakudi","573"],["Perambalur","570"],["Poonamallee","575"],["Pudukkottai","546"],["Ramanathapuram","567"],["Ranipet","781"],["Salem","545"],["Sivaganga","561"],["Sivakasi","580"],["Tenkasi","551"],["Thanjavur","541"],["Theni","569"],["Thoothukudi (Tuticorin)","554"],["Tiruchirappalli","560"],["Tirunelveli","548"],["Tirupattur","550"],["Tiruppur","568"],["Tiruvallur","572"],["Tiruvannamalai","553"],["Tiruvarur","574"],["Vellore","543"],["Viluppuram","542"],["Virudhunagar","549"]],[["Adilabad","582"],["Bhadradri Kothagudem","583"],["Hyderabad","581"],["Jagtial","584"],["Jangaon","585"],["Jayashankar Bhupalpally","586"],["Jogulamba Gadwal","587"],["Kamareddy","588"],["Karimnagar","589"],["Khammam","590"],["Kumuram Bheem","591"],["Mahabubabad","592"],["Mahabubnagar","593"],["Mancherial","594"],["Medak","595"],["Medchal","596"],["Mulugu","612"],["Nagarkurnool","597"],["Nalgonda","598"],["Narayanpet","613"],["Nirmal","599"],["Nizamabad","600"],["Peddapalli","601"],["Rajanna Sircilla","602"],["Rangareddy","603"],["Sangareddy","604"],["Siddipet","605"],["Suryapet","606"],["Vikarabad","607"],["Wanaparthy","608"],["Warangal(Rural)","609"],["Warangal(Urban)","610"],["Yadadri Bhuvanagiri","611"]],[["Dhalai","614"],["Gomati","615"],["Khowai","616"],["North Tripura","617"],["Sepahijala","618"],["South Tripura","619"],["Unakoti","620"],["West Tripura","621"]],[["Agra","622"],["Aligarh","623"],["Ambedkar Nagar","625"],["Amethi","626"],["Amroha","627"],["Auraiya","628"],["Ayodhya","646"],["Azamgarh","629"],["Badaun","630"],["Baghpat","631"],["Bahraich","632"],["Balarampur","633"],["Ballia","634"],["Banda","635"],["Barabanki","636"],["Bareilly","637"],["Basti","638"],["Bhadohi","687"],["Bijnour","639"],["Bulandshahr","640"],["Chandauli","641"],["Chitrakoot","642"],["Deoria","643"],["Etah","644"],["Etawah","645"],["Farrukhabad","647"],["Fatehpur","648"],["Firozabad","649"],["Gautam Buddha Nagar","650"],["Ghaziabad","651"],["Ghazipur","652"],["Gonda","653"],["Gorakhpur","654"],["Hamirpur","655"],["Hapur","656"],["Hardoi","657"],["Hathras","658"],["Jalaun","659"],["Jaunpur","660"],["Jhansi","661"],["Kannauj","662"],["Kanpur Dehat","663"],["Kanpur Nagar","664"],["Kasganj","665"],["Kaushambi","666"],["Kushinagar","667"],["Lakhimpur Kheri","668"],["Lalitpur","669"],["Lucknow","670"],["Maharajganj","671"],["Mahoba","672"],["Mainpuri","673"],["Mathura","674"],["Mau","675"],["Meerut","676"],["Mirzapur","677"],["Moradabad","678"],["Muzaffarnagar","679"],["Pilibhit","680"],["Pratapgarh","682"],["Prayagraj","624"],["Raebareli","681"],["Rampur","683"],["Saharanpur","684"],["Sambhal","685"],["Sant Kabir Nagar","686"],["Shahjahanpur","688"],["Shamli","689"],["Shravasti","690"],["Siddharthnagar","691"],["Sitapur","692"],["Sonbhadra","693"],["Sultanpur","694"],["Unnao","695"],["Varanasi","696"]],[["Almora","704"],["Bageshwar","707"],["Chamoli","699"],["Champawat","708"],["Dehradun","697"],["Haridwar","702"],["Nainital","709"],["Pauri Garhwal","698"],["Pithoragarh","706"],["Rudraprayag","700"],["Tehri Garhwal","701"],["Udham Singh Nagar","705"],["Uttarkashi","703"]],[["Alipurduar District","710"],["Bankura","711"],["Basirhat HD (North 24 Parganas)","712"],["Birbhum","713"],["Bishnupur HD (Bankura)","714"],["Cooch Behar","715"],["COOCHBEHAR","783"],["Dakshin Dinajpur","716"],["Darjeeling","717"],["Diamond Harbor HD (S 24 Parganas)","718"],["East Bardhaman","719"],["Hoogly","720"],["Howrah","721"],["Jalpaiguri","722"],["Jhargram","723"],["Kalimpong","724"],["Kolkata","725"],["Malda","726"],["Murshidabad","727"],["Nadia","728"],["Nandigram HD (East Medinipore)","729"],["North 24 Parganas","730"],["Paschim Medinipore","731"],["Purba Medinipore","732"],["Purulia","733"],["Rampurhat HD (Birbhum)","734"],["South 24 Parganas","735"],["Uttar Dinajpur","736"],["West Bardhaman","737"]],[["Daman","138"],["Diu","139"]]];
-    const selectDistricts = districts[select.value-1];
-    const distSelect = document.getElementById("districtID")
-    distSelect.innerHTML="";
-    selectDistricts.forEach(value =>
-            distSelect.options.add(new Option(value[0], value[1]))
-    )
-  }
-  function getTomorrow () {
-    let nextDate = new Date(Date.now());
-    let month = nextDate.getMonth();
-    let day = nextDate.getDate();
-    if (month < 10) month = "0" + ( month + 1 );
-    if (day < 10) day = "0" + day;
-    return [nextDate.getFullYear(), month, day].join('-');
-  }
-  function changeURL() {
-    if(isDistrictElsePIN) {
-      if (document.getElementById("districtID").value === "") {
-        alert("Please select State & District");
-        return;
-      }
-      for (var days_i = 0; days_i < daysNew; days_i++) {
-        urlNew[days_i] = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByDistrict?district_id=" +
-        document.getElementById("districtID").value + "&date=" + getFormattedDateFormat(days_i);
-      }
-    } else {
-      if (document.getElementById("pincode").value === "") {
-        alert("Please enter correct pincode");
-        return;
-      }
-      for (var days_i = 0; days_i < daysNew; days_i++) {
-        urlNew[days_i] = "https://cdn-api.co-vin.in/api/v2/appointment/sessions/public/calendarByPin?pincode=" +
-        document.getElementById("pincode").value + "&date=" + getFormattedDateFormat(days_i);
-      }
-    }
-    timeOut = document.getElementById("timeout").value * 1000;
-  }
-  function startChecking() {
-    if (timer) {
-      clearTimeout(timer);
-      timer = 0;
-    }
-    changeURL();
-    loadDoc();
-    document.getElementById("demo").scrollIntoView();
-  }
-  function addToRemovedList(name){
-    nameListToIgnore.push(name);
-    for (var i = 0; i < daysNew; i++) {
-      newResponse(JSON.parse(prevTextNew[i]), false, false, i);
-    }
-  }
 
-  function getFormattedDateFormat(nextdays) {
-    let d = new Date(document.getElementById("tomorrow").value);
-    let dstring = "";
-    if (nextdays == 0) {
-      dstring = `${("0" + d.getDate()).slice(-2)}\-${("0" + (d.getMonth() + 1)).slice(-2)}\-${d.getFullYear()}`;
-      document.getElementById("dateForCheckBox").innerText = dstring;
-    }
-    d.setDate(d.getDate() + nextdays * 7);
-    dstring = `${("0" + d.getDate()).slice(-2)}\-${("0" + (d.getMonth() + 1)).slice(-2)}\-${d.getFullYear()}`;
-    return dstring;
-  }
-
-  function playSpecial() {
-    play();setTimeout(play, 1500);setTimeout(play, 3000);
-  }
-
-  function applyFilter(b , a) {
-    let isAvailableAfterFilter = 0;
-    if(b.available_capacity != 0) {
-      isAvailableAfterFilter = 1;
-
-      let filterByPrice = filterBypaid || filterByfree;
-      if(filterByPrice) {
-        debugLog("Checking Price " + a.fee_type + " <---> "+ filterBypaid + " <paid=free> " + filterByfree);
-        if (filterBypaid && a.fee_type == "Paid") {
-          isAvailableAfterFilter = 1;
-        } else if (filterByfree && a.fee_type == "Free") {
-          isAvailableAfterFilter = 1;
-        } else {
-          debugLog("Price is not available" + a.fee_type);
-          return 2;
+    // Initialize keyboard shortcuts
+    initShortcuts();
+    
+    // Register shortcut actions
+    registerAction('zoomIn', () => zoomIn());
+    registerAction('zoomOut', () => zoomOut());
+    registerAction('fit', () => fitToScreen());
+    registerAction('refresh', () => refreshDiagram());
+    registerAction('arrange', () => arrangeNodes());
+    registerAction('darkMode', () => toggleDarkMode());
+    registerAction('save', () => exportFileNow());
+    registerAction('open', () => document.getElementById('fileInput').click());
+    registerAction('search', () => {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
         }
-      }
-
-      if(filterByDate) {
-        if (b.date === getFormattedDateFormat(0)) {
-          isAvailableAfterFilter = 1;
-        } else {
-          debugLog("Date is not available" + b.date);
-          return 2;
+    });
+    registerAction('delete', () => {
+        if (window.currentSelectedNode) {
+            if (confirm('Delete this person?')) {
+                saveSnapshot('Delete person');
+                deleteNode();
+                refreshDiagram();
+            }
         }
-      }
-
-      let filterByVaccine = filterBycovisheild || filterBycovaxin || filterBysputnikv;
-      if(filterByVaccine) {
-        if (filterBycovisheild && b.vaccine == "COVISHIELD") {
-          isAvailableAfterFilter = 1;
-        } else if (filterBycovaxin && b.vaccine == "COVAXIN") {
-          isAvailableAfterFilter = 1;
-        } else if (filterBysputnikv && b.vaccine == "SPUTNIK V") {
-          isAvailableAfterFilter = 1;
-        } else {
-          debugLog("Vaccine is not avaiable" + b.vaccine)
-          return 2;
-        }
-      }
-
-      const filterByDose = filterBydose1 || filterBydose2;
-      if (filterByDose) {
-        try {
-          if (filterBydose1 && b.available_capacity_dose1 != 0) {
-            isAvailableAfterFilter = 1;
-          } else if (filterBydose2 && b.available_capacity_dose2 != 0) {
-            isAvailableAfterFilter = 1;
-          } else {
-            debugLog("Dose is not available_capacity_dose1 =>" + b.available_capacity_dose1 + " 2=> " + b.available_capacity_dose2)
-            return 2;
-          }
-        } catch (e) {
-          debugLog(e);
-          debugLog("ERROR IS HERE")
-        }
-      }
-
-      const filterByAge = filterByminage18 || filterByminage40 || filterByminage45;
-      if(filterByAge) {
-        if (filterByminage45 && b.min_age_limit == 45) {
-          isAvailableAfterFilter = 1;
-        } else if (filterByminage40 && b.min_age_limit == 40) {
-          isAvailableAfterFilter =1;
-        } else if (filterByminage18 && b.min_age_limit == 18) {
-          isAvailableAfterFilter =1;
-        } else {
-          debugLog("Age is not avaiable" + b.min_age_limit)
-          return 2;
-        }
-      }
-    }
-    return isAvailableAfterFilter;
-  }
-
-
-  let firstTime = true;
-  function registerNewAvailability(jsonResult) {
-    const xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function () {
-      if (this.readyState === 4 && this.status === 200) {
-        debugLog(this.responseText);
-      }
+    });
+    registerAction('undo', () => performUndo());
+    registerAction('redo', () => performRedo());
+    
+    // Expose shortcuts help
+    window.showShortcutsHelp = showShortcutsHelp;
+    
+    // Export image functions
+    window.exportPng = () => downloadPng('family-tree-' + Date.now() + '.png', 2);
+    window.exportSvg = () => downloadSvg('family-tree-' + Date.now() + '.svg');
+    window.showExportImageModal = function() {
+        const modal = document.getElementById('export-image-modal');
+        if (modal) modal.classList.add('active');
     };
-    xhttp.open("POST", "/alertAvailable.php?refresh="+firstTime, true);
-    xhttp.setRequestHeader('Content-Type', 'application/json');
-    xhttp.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-    xhttp.setRequestHeader('Access-Control-Allow-Origin', '*');
-    xhttp.send(JSON.stringify(jsonResult));
-    if (firstTime) {
-      firstTime = false;
-    }
-  }
-  function searchCentersFromList(name) {
-    for (let i = 0; i < searchCenters.length; i++) {
-      if(name.toLowerCase().includes(searchCenters[i].toLowerCase())) {
-        return true;
-      }
-    }
-    return searchCenters.length == 0;
-  }
-  function newResponse(jsonResult, sound, tracknew, weeknumber) {
-    let isAvailable = false
-    let available = [];
-    let availableFiltered = [];
-    let notAvailable = [];
-    jsonResult.centers.sort(function(a,b) {return (a.name > b.name)?1:-1;});
-    jsonResult.centers.forEach(function (a) {
-      a.sessions.forEach(function (b) {
-          const isAvailableAfterFilter = applyFilter(b, a);
-          if (isAvailableAfterFilter == 1 && searchCentersFromList(a.name)) {
-            available.push("<tr class='available'>     <td>" + a.name + "</td><td>" + b.date + "</td><td>" + b.available_capacity_dose1 + "</td><td>" + b.available_capacity_dose2 + "</td><td>" + b.vaccine + "</td><td>" + a.fee_type + "</td><td>" + b.min_age_limit + "</td><td><button onclick=window.open('https://selfregistration.cowin.gov.in','_blank')>Book now</button></td></tr>");
-            if (sound) {
-              playMusic();
-              playSpecial();
+    window.closeExportImageModal = function() {
+        const modal = document.getElementById('export-image-modal');
+        if (modal) modal.classList.remove('active');
+    };
+    
+    // Statistics modal
+    window.showStatistics = function() {
+        const stats = calculateStatistics();
+        if (!stats) {
+            alert('No data to analyze');
+            return;
+        }
+        
+        const modal = document.getElementById('statistics-modal');
+        const content = document.getElementById('statistics-content');
+        
+        content.innerHTML = `
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">${stats.totalPersons}</div>
+                    <div class="stat-label">Total Persons</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.totalFamilies}</div>
+                    <div class="stat-label">Families</div>
+                </div>
+                <div class="stat-card male">
+                    <div class="stat-value">${stats.males}</div>
+                    <div class="stat-label">Males</div>
+                </div>
+                <div class="stat-card female">
+                    <div class="stat-value">${stats.females}</div>
+                    <div class="stat-label">Females</div>
+                </div>
+            </div>
+            
+            <div class="stats-section">
+                <h3>Lifespan</h3>
+                <div class="stats-row">
+                    <span>Average lifespan:</span>
+                    <strong>${stats.avgLifespan || 'N/A'} years</strong>
+                </div>
+                ${stats.oldestPerson ? `
+                <div class="stats-row">
+                    <span>Oldest person:</span>
+                    <strong>${stats.oldestPerson.name.replace(/\//g, '')} (${stats.oldestPerson.age} years)</strong>
+                </div>` : ''}
+            </div>
+            
+            ${stats.mostChildren.count > 0 ? `
+            <div class="stats-section">
+                <h3>Families</h3>
+                <div class="stats-row">
+                    <span>Most children:</span>
+                    <strong>${stats.mostChildren.family.replace(/\//g, '')} (${stats.mostChildren.count} children)</strong>
+                </div>
+            </div>` : ''}
+            
+            ${stats.topSurnames.length > 0 ? `
+            <div class="stats-section">
+                <h3>Common Surnames</h3>
+                <div class="stats-list">
+                    ${stats.topSurnames.map(([name, count]) => `
+                        <div class="stats-list-item">
+                            <span>${name}</span>
+                            <span class="stats-count">${count}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>` : ''}
+            
+            ${stats.topPlaces.length > 0 ? `
+            <div class="stats-section">
+                <h3>Common Places</h3>
+                <div class="stats-list">
+                    ${stats.topPlaces.map(([name, count]) => `
+                        <div class="stats-list-item">
+                            <span>${name}</span>
+                            <span class="stats-count">${count}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>` : ''}
+        `;
+        
+        modal.classList.add('active');
+    };
+    
+    window.closeStatisticsModal = function() {
+        const modal = document.getElementById('statistics-modal');
+        if (modal) modal.classList.remove('active');
+    };
+    
+    // Duplicate detection modal
+    window.showDuplicates = function() {
+        showLoading('Finding duplicates...');
+        setTimeout(() => {
+            const duplicates = findDuplicates();
+            hideLoading();
+            
+            const modal = document.getElementById('duplicates-modal');
+            const content = document.getElementById('duplicates-content');
+            
+            if (duplicates.length === 0) {
+                content.innerHTML = '<p class="placeholder-text">No potential duplicates found!</p>';
+            } else {
+                content.innerHTML = `
+                    <p style="color: var(--text-muted); margin-bottom: 12px;">
+                        Found ${duplicates.length} potential duplicate${duplicates.length > 1 ? 's' : ''}:
+                    </p>
+                    <div class="duplicates-list">
+                        ${duplicates.slice(0, 20).map((d, i) => `
+                            <div class="duplicate-item">
+                                <div class="duplicate-header">
+                                    <span class="duplicate-score">${d.similarity}% match</span>
+                                </div>
+                                <div class="duplicate-persons">
+                                    <div class="duplicate-person" onclick="goToSearchResult('${d.person1.id}'); closeDuplicatesModal();">
+                                        <strong>${d.person1.name.replace(/\//g, '')}</strong>
+                                        ${d.person1.birth ? `<small>b. ${d.person1.birth}</small>` : ''}
+                                    </div>
+                                    <span class="duplicate-vs">vs</span>
+                                    <div class="duplicate-person" onclick="goToSearchResult('${d.person2.id}'); closeDuplicatesModal();">
+                                        <strong>${d.person2.name.replace(/\//g, '')}</strong>
+                                        ${d.person2.birth ? `<small>b. ${d.person2.birth}</small>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                        ${duplicates.length > 20 ? `<p class="search-more">+${duplicates.length - 20} more...</p>` : ''}
+                    </div>
+                `;
             }
-            isAvailable = true;
-            lastAvailableDetailsNew[weeknumber] = a.name + " - " + (new Date().toLocaleString());
-          } else if (isAvailableAfterFilter == 1) {
-            if (nameListToIgnore.indexOf(a.name) === -1) {
-              availableFiltered.push("<tr class='available-filtered'><td>" + a.name + "</td><td>" + b.date + "</td><td>" + b.available_capacity_dose1 + "</td><td>" + b.available_capacity_dose2 + "</td><td>" + b.vaccine + "</td><td>" + a.fee_type + "</td><td>" + b.min_age_limit + "</td><td><button onclick='addToRemovedList(\"" + a.name + "\")'>Remove</button></td></tr>");
-            }
-          } else if (isAvailableAfterFilter == 2) {
-            if (nameListToIgnore.indexOf(a.name) === -1) {
-              availableFiltered.push("<tr class='available-filtered'><td>" + a.name + "</td><td>" + b.date + "</td><td>" + b.available_capacity_dose1 + "</td><td>" + b.available_capacity_dose2 + "</td><td>" + b.vaccine + "</td><td>" + a.fee_type + "</td><td>" + b.min_age_limit + "</td><td><button onclick='addToRemovedList(\"" + a.name + "\")'>Remove</button></td></tr>");
-            }
-          } else {
-            if (nameListToIgnore.indexOf(a.name) === -1) {
-              notAvailable.push("<tr class='not-available'><td>" + a.name + "</td><td>" + b.date + "</td><td>" + b.available_capacity_dose1 + "</td><td>" + b.available_capacity_dose2 + "</td><td>" + b.vaccine + "</td><td>" + a.fee_type + "</td><td>" + b.min_age_limit + "</td><td><button onclick='addToRemovedList(\"" + a.name + "\")'>Remove</button></td></tr>");
-            }
-          }
-      })
-
-    })
-    tableNew[weeknumber].available = available;
-    tableNew[weeknumber].notAvailable = notAvailable;
-    tableNew[weeknumber].availableFiltered = availableFiltered;
-    displayTable();
-    if(sound) {
-      play();
-    }
-    document.bgColor = "#EEEEEE";
-    if (tracknew) {
-      registerNewAvailability(jsonResult);
-    }
-    return isAvailable;
-  }
-
-  function displayTable() {
-    let tableHTML = "<table>" + tableHeader.header;
-    for (var i = 0; i < daysNew; i++) {
-      tableHTML += tableNew[i].available.join(" ");
+            
+            modal.classList.add('active');
+        }, 50);
+    };
+    
+    window.closeDuplicatesModal = function() {
+        const modal = document.getElementById('duplicates-modal');
+        if (modal) modal.classList.remove('active');
+    };
+    
+    // Timeline modal
+    window.showTimeline = function() {
+        const events = extractEvents();
+        const modal = document.getElementById('timeline-modal');
+        const content = document.getElementById('timeline-content');
+        content.innerHTML = generateTimelineHTML(events);
+        modal.classList.add('active');
+    };
+    
+    window.closeTimelineModal = function() {
+        const modal = document.getElementById('timeline-modal');
+        if (modal) modal.classList.remove('active');
+    };
+    
+    // Relationship calculator modal
+    window.showRelationshipCalc = function() {
+        const modal = document.getElementById('relationship-modal');
+        const select1 = document.getElementById('relPerson1');
+        const select2 = document.getElementById('relPerson2');
+        
+        // Populate dropdowns
+        const individuals = getAllIndividuals();
+        const options = individuals.map(p => 
+            `<option value="${p.id}">${p.name.replace(/\//g, '')}</option>`
+        ).join('');
+        
+        select1.innerHTML = '<option value="">Select person...</option>' + options;
+        select2.innerHTML = '<option value="">Select person...</option>' + options;
+        document.getElementById('relationship-result').innerHTML = '';
+        
+        modal.classList.add('active');
+    };
+    
+    window.closeRelationshipModal = function() {
+        const modal = document.getElementById('relationship-modal');
+        if (modal) modal.classList.remove('active');
+    };
+    
+    // Print function
+    window.printTree = function() {
+        window.print();
+    };
+    
+    // Share link functionality
+    window.showShareModal = function() {
+        const modal = document.getElementById('share-modal');
+        modal.classList.add('active');
+        
+        // Generate share data (encode current data in URL for small trees)
+        const data = createFileContent();
+        if (data.length < 5000) {
+            const encoded = btoa(unescape(encodeURIComponent(data)));
+            const shareUrl = window.location.origin + window.location.pathname + '#data=' + encoded.substring(0, 2000);
+            document.getElementById('shareUrl').value = shareUrl;
+        } else {
+            document.getElementById('shareUrl').value = 'Tree too large to share via URL. Export and share the file instead.';
+        }
+        
+        // Generate embed code
+        const embedCode = `<iframe src="${window.location.href}" width="800" height="600" frameborder="0" style="border: 1px solid #ccc;"></iframe>`;
+        document.getElementById('embedCode').textContent = embedCode;
+    };
+    
+    window.closeShareModal = function() {
+        const modal = document.getElementById('share-modal');
+        if (modal) modal.classList.remove('active');
+    };
+    
+    window.copyShareUrl = function() {
+        const input = document.getElementById('shareUrl');
+        input.select();
+        document.execCommand('copy');
+        alert('URL copied to clipboard!');
+    };
+    
+    window.copyEmbedCode = function() {
+        const code = document.getElementById('embedCode').textContent;
+        navigator.clipboard.writeText(code).then(() => {
+            alert('Embed code copied to clipboard!');
+        });
+    };
+    
+    // ========== IMAGE CROP FUNCTIONALITY ==========
+    let cropState = {
+        file: null,
+        imageUrl: null,
+        box: { x: 50, y: 50, size: 150 },
+        imageRect: null,
+        isDragging: false,
+        isResizing: false,
+        activeHandle: null,
+        startX: 0,
+        startY: 0,
+        startBox: null
+    };
+    
+    window.openCropModal = function(file) {
+        cropState.file = file;
+        
+        const modal = document.getElementById('crop-modal');
+        const cropImage = document.getElementById('cropImage');
+        
+        // Revoke previous URL if exists
+        if (cropState.imageUrl) {
+            URL.revokeObjectURL(cropState.imageUrl);
+        }
+        
+        cropState.imageUrl = URL.createObjectURL(file);
+        cropImage.src = cropState.imageUrl;
+        
+        cropImage.onload = function() {
+            // Reset crop box to center
+            const container = document.getElementById('cropContainer');
+            const containerRect = container.getBoundingClientRect();
+            const imgRect = cropImage.getBoundingClientRect();
+            
+            // Calculate image position within container
+            cropState.imageRect = {
+                left: imgRect.left - containerRect.left,
+                top: imgRect.top - containerRect.top,
+                width: imgRect.width,
+                height: imgRect.height
+            };
+            
+            // Initial crop box (square, centered on image)
+            const initialSize = Math.min(imgRect.width, imgRect.height) * 0.7;
+            cropState.box = {
+                x: cropState.imageRect.left + (imgRect.width - initialSize) / 2,
+                y: cropState.imageRect.top + (imgRect.height - initialSize) / 2,
+                size: initialSize
+            };
+            
+            updateCropBox();
+            updatePreview();
+            initCropHandlers();
+        };
+        
+        modal.classList.add('active');
+    };
+    
+    window.closeCropModal = function() {
+        const modal = document.getElementById('crop-modal');
+        modal.classList.remove('active');
+        
+        if (cropState.imageUrl) {
+            URL.revokeObjectURL(cropState.imageUrl);
+            cropState.imageUrl = null;
+        }
+        cropState.file = null;
+    };
+    
+    function updateCropBox() {
+        const box = document.getElementById('cropBox');
+        box.style.left = cropState.box.x + 'px';
+        box.style.top = cropState.box.y + 'px';
+        box.style.width = cropState.box.size + 'px';
+        box.style.height = cropState.box.size + 'px';
     }
     
-    if (filterByhide != 0) {
-      for (var i = 0; i < daysNew; i++) {
-        tableHTML += tableNew[i].availableFiltered.join(" ");
-      }
+    function updatePreview() {
+        const cropImage = document.getElementById('cropImage');
+        const previewImg = document.getElementById('previewImg');
+        
+        if (!cropState.imageRect) return;
+        
+        // Create a canvas for the preview
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const previewSize = 80;
+        
+        canvas.width = previewSize;
+        canvas.height = previewSize;
+        
+        // Calculate source coordinates on original image
+        const scaleX = cropImage.naturalWidth / cropState.imageRect.width;
+        const scaleY = cropImage.naturalHeight / cropState.imageRect.height;
+        
+        const sx = (cropState.box.x - cropState.imageRect.left) * scaleX;
+        const sy = (cropState.box.y - cropState.imageRect.top) * scaleY;
+        const sSize = cropState.box.size * scaleX;
+        
+        ctx.drawImage(cropImage, sx, sy, sSize, sSize, 0, 0, previewSize, previewSize);
+        previewImg.src = canvas.toDataURL('image/jpeg', 0.9);
     }
-    if (filterByhide == 2) {
-      for (var i = 0; i < daysNew; i++) {
-        tableHTML += tableNew[i].notAvailable.join(" ");
-      }
+    
+    function initCropHandlers() {
+        const cropBox = document.getElementById('cropBox');
+        const container = document.getElementById('cropContainer');
+        
+        // Remove old handlers
+        cropBox.onmousedown = null;
+        cropBox.ontouchstart = null;
+        
+        // Drag handler for the box
+        cropBox.addEventListener('mousedown', startDrag);
+        cropBox.addEventListener('touchstart', startDrag, { passive: false });
+        
+        // Handle resize
+        document.querySelectorAll('.crop-handle').forEach(handle => {
+            handle.addEventListener('mousedown', startResize);
+            handle.addEventListener('touchstart', startResize, { passive: false });
+        });
+        
+        // Move and end handlers on document
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('touchmove', handleMove, { passive: false });
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
     }
-    tableHTML += "</table>";
-    document.getElementById("currentTable").innerHTML =  tableHTML;
-  }
-
-  function sameResponse (weeknumber) {
-// TODO for array colour
-    document.bgColor = "#FFFFFF";
-  }
-
-  function loadDoc() {
-    for (var days_i = 0; days_i < daysNew; days_i++) {
-      loadDoc1(days_i);
+    
+    function startDrag(e) {
+        if (e.target.classList.contains('crop-handle')) return;
+        e.preventDefault();
+        
+        const touch = e.touches ? e.touches[0] : e;
+        cropState.isDragging = true;
+        cropState.startX = touch.clientX;
+        cropState.startY = touch.clientY;
+        cropState.startBox = { ...cropState.box };
     }
-    retryCount++;
-    timer = setTimeout(loadDoc, timeOut)
-  }
-
-  function loadDoc1(weeknumber) {
-    const xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function () {
-      if (this.readyState === 4 && this.status === 200) {
-        if (this.responseText === prevTextNew[weeknumber]) {
-          sameResponse(weeknumber);
-        } else {
-          prevTextNew[weeknumber] = this.responseText;
-          if (newResponse(JSON.parse(this.responseText), true, true, weeknumber)) {
-            playCount = 5;
-          }
+    
+    function startResize(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const touch = e.touches ? e.touches[0] : e;
+        cropState.isResizing = true;
+        cropState.activeHandle = e.target.dataset.handle;
+        cropState.startX = touch.clientX;
+        cropState.startY = touch.clientY;
+        cropState.startBox = { ...cropState.box };
+    }
+    
+    function handleMove(e) {
+        if (!cropState.isDragging && !cropState.isResizing) return;
+        e.preventDefault();
+        
+        const touch = e.touches ? e.touches[0] : e;
+        const dx = touch.clientX - cropState.startX;
+        const dy = touch.clientY - cropState.startY;
+        
+        if (cropState.isDragging) {
+            // Move the box
+            let newX = cropState.startBox.x + dx;
+            let newY = cropState.startBox.y + dy;
+            
+            // Constrain to image bounds
+            const ir = cropState.imageRect;
+            newX = Math.max(ir.left, Math.min(newX, ir.left + ir.width - cropState.box.size));
+            newY = Math.max(ir.top, Math.min(newY, ir.top + ir.height - cropState.box.size));
+            
+            cropState.box.x = newX;
+            cropState.box.y = newY;
+        } else if (cropState.isResizing) {
+            // Resize the box (keeping it square)
+            const delta = Math.max(dx, dy);
+            let newSize = cropState.startBox.size;
+            let newX = cropState.startBox.x;
+            let newY = cropState.startBox.y;
+            
+            const handle = cropState.activeHandle;
+            const ir = cropState.imageRect;
+            
+            if (handle === 'se') {
+                newSize = cropState.startBox.size + delta;
+            } else if (handle === 'nw') {
+                newSize = cropState.startBox.size - delta;
+                newX = cropState.startBox.x + delta;
+                newY = cropState.startBox.y + delta;
+            } else if (handle === 'ne') {
+                newSize = cropState.startBox.size + dx;
+                newY = cropState.startBox.y - dx;
+            } else if (handle === 'sw') {
+                newSize = cropState.startBox.size - dx;
+                newX = cropState.startBox.x + dx;
+            }
+            
+            // Minimum size
+            newSize = Math.max(50, newSize);
+            
+            // Constrain to image bounds
+            if (newX < ir.left) {
+                newSize -= (ir.left - newX);
+                newX = ir.left;
+            }
+            if (newY < ir.top) {
+                newSize -= (ir.top - newY);
+                newY = ir.top;
+            }
+            if (newX + newSize > ir.left + ir.width) {
+                newSize = ir.left + ir.width - newX;
+            }
+            if (newY + newSize > ir.top + ir.height) {
+                newSize = ir.top + ir.height - newY;
+            }
+            
+            cropState.box.x = newX;
+            cropState.box.y = newY;
+            cropState.box.size = newSize;
         }
-        document.getElementById("demo").innerHTML = "Checked " + retryCount + " times.";
-        for (var i = 0; i < daysNew; i++) {
-          document.getElementById("demo").innerHTML += "<br/>Week-" + (i+1) + " Last checked at "+ lastCheckedTimeNew[i] + ". Last available at "+ lastAvailableDetailsNew[i] ;
+        
+        updateCropBox();
+        updatePreview();
+    }
+    
+    function endDrag() {
+        cropState.isDragging = false;
+        cropState.isResizing = false;
+        cropState.activeHandle = null;
+    }
+    
+    window.applyCrop = function() {
+        const cropImage = document.getElementById('cropImage');
+        
+        if (!cropState.imageRect) {
+            alert('Please wait for the image to load.');
+            return;
         }
-        if (playCount > 0) {
-          playCount--;
-          play();
+        
+        // Create output canvas (200x200 for profile photos)
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const outputSize = 200;
+        
+        canvas.width = outputSize;
+        canvas.height = outputSize;
+        
+        // Calculate source coordinates on original image
+        const scaleX = cropImage.naturalWidth / cropState.imageRect.width;
+        const scaleY = cropImage.naturalHeight / cropState.imageRect.height;
+        
+        const sx = Math.max(0, (cropState.box.x - cropState.imageRect.left) * scaleX);
+        const sy = Math.max(0, (cropState.box.y - cropState.imageRect.top) * scaleY);
+        const sSize = cropState.box.size * scaleX;
+        
+        // Draw cropped and resized image
+        ctx.drawImage(cropImage, sx, sy, sSize, sSize, 0, 0, outputSize, outputSize);
+        
+        // Convert to compressed JPEG
+        const base64 = canvas.toDataURL('image/jpeg', 0.85);
+        
+        // Calculate file size for user feedback
+        const sizeKB = Math.round((base64.length * 0.75) / 1024);
+        console.log(`Cropped image size: ${sizeKB}KB`);
+        
+        // Apply to current person
+        if (window.applyImageToCurrentPerson) {
+            window.applyImageToCurrentPerson(base64);
         }
-      }
+        
+        closeCropModal();
     };
-    xhttp.open("GET", urlNew[weeknumber], true);
-    xhttp.send();
-    lastCheckedTimeNew[weeknumber] = (new Date().toLocaleString());
-  }
+    // ========== END IMAGE CROP FUNCTIONALITY ==========
+    
+    window.calculateRel = function() {
+        const id1 = document.getElementById('relPerson1').value;
+        const id2 = document.getElementById('relPerson2').value;
+        
+        if (!id1 || !id2) {
+            document.getElementById('relationship-result').innerHTML = 
+                '<p style="color: var(--warning);">Please select both persons.</p>';
+            return;
+        }
+        
+        const result = calculateRelationship(id1, id2);
+        
+        let html = `<div class="relationship-result">
+            <div class="rel-badge">${result.relationship}</div>`;
+        
+        if (result.path && result.path.length > 1) {
+            html += '<div class="rel-path">';
+            result.path.forEach((step, i) => {
+                const person = getAllIndividuals().find(p => p.id === step.id);
+                const name = person ? person.name.replace(/\//g, '') : step.id;
+                html += `<span class="rel-step" onclick="goToSearchResult('${step.id}'); closeRelationshipModal();">${name}</span>`;
+                if (i < result.path.length - 1) {
+                    html += `<span class="rel-arrow">→</span>`;
+                }
+            });
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        document.getElementById('relationship-result').innerHTML = html;
+    };
+    
+    // Undo/Redo functions
+    window.performUndo = function() {
+        if (undo()) {
+            refreshDiagram();
+        }
+    };
+    
+    window.performRedo = function() {
+        if (redo()) {
+            refreshDiagram();
+        }
+    };
+    
+    // Update undo/redo button states
+    addStateListener((state) => {
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+        if (undoBtn) undoBtn.disabled = !state.canUndo;
+        if (redoBtn) redoBtn.disabled = !state.canRedo;
+    });
+    
+    // Expose saveSnapshot for use in edit functions
+    window.saveStateForUndo = saveSnapshot;
 
-  var audio1 = new Audio('https://bigsoundbank.com/UPLOAD/mp3/2255.mp3');
-  var audio2 = new Audio('https://bigsoundbank.com/UPLOAD/mp3/1928.mp3');
-  function play() {
-    audio1.play();
-  }
-  function playMusic() {
-    audio2.play();
-  }
+    // Set up callback for when a node is clicked while filtering
+    setNodeClickCallback((personId, personName) => {
+        // Expand to show this person's family connections without full re-render
+        const addedCount = expandFromPerson(personId);
+        if (addedCount > 0) {
+            console.log(`Added ${addedCount} connected nodes for ${personName}`);
+        }
+    });
 
-  function resetPlay() {
-    playCount = 0;
-    audio1.pause();
-    audio2.pause();
-  }
-
-  function stopAll(){
-    if (timer) {
-      clearTimeout(timer);
-      timer = 0;
+    // Loading overlay helpers
+    function showLoading(message = 'Processing...') {
+        const overlay = document.getElementById('loading-overlay');
+        const text = overlay.querySelector('.loading-text');
+        if (text) text.textContent = message;
+        overlay.classList.add('active');
     }
-    resetPlay();
-  }
-  function setDefault() {
-    initValues();
-    document.getElementById("tablinks1").click();
-    document.getElementById("tomorrow").value = getTomorrow();
-  }
-  function toggleTab() {
-    let i, tabcontent, ss;
-    tabcontent = document.getElementsByClassName("tabcontent");
-    if (isDistrictElsePIN) {
-      tabcontent[0].style.display = "none";
-      tabcontent[1].style.display = "block";
-      ss = document.getElementById("tablinks1");
-      ss.className += " active";
-      ss = document.getElementById("tablinks2");
-      ss.className = "tablinks2";
-    } else {
-      tabcontent[1].style.display = "none";
-      tabcontent[0].style.display = "block";
-      ss = document.getElementById("tablinks2");
-      ss.className += " active"
-      ss = document.getElementById("tablinks1");
-      ss.className = "tablinks1";
+    
+    function hideLoading() {
+        document.getElementById('loading-overlay').classList.remove('active');
     }
-    isDistrictElsePIN = !isDistrictElsePIN;
-  }
-  setDefault();
+
+    window.refreshDiagram = function() {
+        showLoading('Rendering tree...');
+        setTimeout(() => {
+            startDraw();
+            updatePersonSelector();
+            hideLoading();
+        }, 50);
+    };
+    
+    window.handleGedComFileSelect = async function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        showLoading('Importing GEDCOM...');
+        
+        try {
+            await importGedComFile(event);
+            refreshDiagram();
+        } catch (err) {
+            hideLoading();
+            alert('Error importing GEDCOM: ' + err.message);
+        }
+    };
+    
+    window.handleCsvFileSelect = async function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        showLoading('Importing CSV...');
+        
+        try {
+            const gedcomText = await importCSVFile(file);
+            importGedComText(gedcomText);
+            refreshDiagram();
+        } catch (err) {
+            hideLoading();
+            alert('Error importing CSV: ' + err.message);
+        }
+    };
+    
+    window.handleJsonFileSelect = async function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        showLoading('Importing JSON...');
+        
+        try {
+            const text = await file.text();
+            const jsonData = JSON.parse(text);
+            
+            // Convert JSON to GEDCOM format
+            let gedcomText = '0 HEAD\n1 SOUR JSON Import\n1 GEDC\n2 VERS 5.5.1\n2 FORM LINEAGE-LINKED\n1 CHAR UTF-8\n';
+            
+            // Process individuals
+            if (jsonData.individuals && Array.isArray(jsonData.individuals)) {
+                jsonData.individuals.forEach(ind => {
+                    gedcomText += `0 ${ind.id} INDI\n`;
+                    if (ind.name) gedcomText += `1 NAME ${ind.name}\n`;
+                    if (ind.givenName) gedcomText += `2 GIVN ${ind.givenName}\n`;
+                    if (ind.surname) gedcomText += `2 SURN ${ind.surname}\n`;
+                    if (ind.sex) gedcomText += `1 SEX ${ind.sex}\n`;
+                    if (ind.birth) {
+                        gedcomText += `1 BIRT\n`;
+                        if (ind.birth.date) gedcomText += `2 DATE ${ind.birth.date}\n`;
+                        if (ind.birth.place) gedcomText += `2 PLAC ${ind.birth.place}\n`;
+                    }
+                    if (ind.death) {
+                        gedcomText += `1 DEAT\n`;
+                        if (ind.death.date) gedcomText += `2 DATE ${ind.death.date}\n`;
+                        if (ind.death.place) gedcomText += `2 PLAC ${ind.death.place}\n`;
+                    }
+                    if (ind.familyAsSpouse) {
+                        ind.familyAsSpouse.forEach(fid => {
+                            gedcomText += `1 FAMS ${fid}\n`;
+                        });
+                    }
+                    if (ind.familyAsChild) {
+                        ind.familyAsChild.forEach(fid => {
+                            gedcomText += `1 FAMC ${fid}\n`;
+                        });
+                    }
+                    if (ind.image) gedcomText += `1 IMG ${ind.image}\n`;
+                });
+            }
+            
+            // Process families
+            if (jsonData.families && Array.isArray(jsonData.families)) {
+                jsonData.families.forEach(fam => {
+                    gedcomText += `0 ${fam.id} FAM\n`;
+                    if (fam.husband) {
+                        const husbands = Array.isArray(fam.husband) ? fam.husband : [fam.husband];
+                        husbands.forEach(h => gedcomText += `1 HUSB ${h}\n`);
+                    }
+                    if (fam.wife) {
+                        const wives = Array.isArray(fam.wife) ? fam.wife : [fam.wife];
+                        wives.forEach(w => gedcomText += `1 WIFE ${w}\n`);
+                    }
+                    if (fam.children) {
+                        fam.children.forEach(c => gedcomText += `1 CHIL ${c}\n`);
+                    }
+                    if (fam.marriage) {
+                        gedcomText += `1 MARR\n`;
+                        if (fam.marriage.date) gedcomText += `2 DATE ${fam.marriage.date}\n`;
+                        if (fam.marriage.place) gedcomText += `2 PLAC ${fam.marriage.place}\n`;
+                    }
+                });
+            }
+            
+            gedcomText += '0 TRLR\n';
+            
+            importGedComText(gedcomText);
+            refreshDiagram();
+        } catch (err) {
+            hideLoading();
+            alert('Error importing JSON: ' + err.message);
+        }
+    };
+    
+    window.showCSVImportHelp = function() {
+        const columns = getExpectedColumns();
+        alert('CSV Import Format\\n\\nExpected columns:\\n' + 
+              columns.map(c => `• ${c.name}${c.required ? ' (required)' : ''}: ${c.description}`).join('\\n') +
+              '\\n\\nNote: Column names are case-insensitive.');
+    };
+    
+    window.addNewNode = function (typeOfNewNode) {
+        saveSnapshot('Add ' + typeOfNewNode);
+        addNewNode(typeOfNewNode);
+        refreshDiagram();
+    };
+    
+    window.handleNodeValueChange = function (key, event, familyRowCacheIndex) {
+        saveSnapshot('Edit ' + key);
+        handleNodeValueChange(key, event, familyRowCacheIndex);
+        updateAllNodesData(); // Update without full redraw to preserve expanded nodes
+    };
+    
+    window.handleNodeValueWithNewNode = function (key, event, parentCacheIndex) {
+        saveSnapshot('Add ' + key);
+        handleNodeValueWithNewNode(key, event, parentCacheIndex);
+        updateAllNodesData(); // Update without full redraw to preserve expanded nodes
+    };
+    
+    window.handleImgFileSelect = function (event) {
+        saveSnapshot('Add image');
+        handleImgFileSelect(event);
+        setTimeout(() => updateAllNodesData(), 100); // Update after image is loaded
+    };
+    
+    window.deleteNode = function () {
+        saveSnapshot('Delete node');
+        deleteNode();
+        refreshDiagram();
+    };
+    
+    window.exportFileNow = function () {
+        showLoading('Exporting file...');
+        setTimeout(() => {
+            gedcomExport();
+            hideLoading();
+        }, 50);
+    };
+    
+    window.exportJsonNow = function () {
+        showLoading('Exporting JSON...');
+        setTimeout(() => {
+            exportToJSON();
+            hideLoading();
+        }, 50);
+    };
+    
+    // Zoom controls
+    window.zoomIn = zoomIn;
+    window.zoomOut = zoomOut;
+    window.fitToScreen = fitToScreen;
+    
+    // Drag toggle
+    window.toggleDrag = function() {
+        const enabled = toggleDragMode();
+        // Update both sidebar and floating graph buttons
+        const sidebarBtn = document.getElementById('dragToggleBtn');
+        const graphBtn = document.getElementById('graphDragBtn');
+        
+        const icon = enabled ? '✋' : '🔒';
+        const title = enabled ? 'Drag enabled - click to lock' : 'Drag disabled - click to unlock';
+        
+        if (sidebarBtn) {
+            sidebarBtn.textContent = icon;
+            sidebarBtn.title = title;
+        }
+        if (graphBtn) {
+            graphBtn.textContent = icon;
+            graphBtn.title = title;
+            graphBtn.classList.toggle('active', enabled);
+        }
+    };
+    
+    // Tab switching for selected person
+    window.switchTab = function(tabId, btn) {
+        // Hide all tabs
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.person-tab').forEach(t => t.classList.remove('active'));
+        
+        // Show selected tab
+        const tabEl = document.getElementById('tab-' + tabId);
+        if (tabEl) tabEl.classList.add('active');
+        btn.classList.add('active');
+    };
+    
+    // Toggle death fields visibility
+    window.toggleDeathFields = function(checkbox) {
+        const deathFields = document.getElementById('deathFields');
+        const toggle = checkbox.closest('.alive-toggle');
+        const label = toggle.querySelector('label');
+        
+        if (checkbox.checked) {
+            // Person is alive - hide death fields
+            deathFields.classList.remove('visible');
+            toggle.classList.remove('deceased');
+            if (label) label.textContent = '✅ Currently Living';
+        } else {
+            // Person is deceased - show death fields
+            deathFields.classList.add('visible');
+            toggle.classList.add('deceased');
+            if (label) label.textContent = '⚫ Deceased';
+        }
+    };
+    
+    // Navigation controls
+    window.applyFilter = function() {
+        const personSelect = document.getElementById('focusPerson');
+        const genCount = document.getElementById('genCount');
+        
+        showLoading('Applying filter...');
+        setTimeout(() => {
+            if (personSelect.value) {
+                setFocusPerson(personSelect.value);
+                setMaxGenerations(parseInt(genCount.value) || 3);
+            }
+            startDraw();
+            updatePersonSelector();
+            fitToScreen();
+            hideLoading();
+        }, 50);
+    };
+    
+    window.resetFilter = function() {
+        showLoading('Resetting view...');
+        setTimeout(() => {
+            clearFilter();
+            document.getElementById('focusPerson').value = '';
+            document.getElementById('genCount').value = '3';
+            startDraw();
+            updatePersonSelector();
+            fitToScreen();
+            hideLoading();
+        }, 50);
+    };
+    
+    // Re-layout visible nodes to fix overlapping
+    window.arrangeNodes = function() {
+        showLoading('Arranging nodes...');
+        setTimeout(() => {
+            relayoutNodes();
+            hideLoading();
+        }, 400);
+    };
+    
+    // Dark mode toggle
+    window.toggleDarkMode = function() {
+        const html = document.documentElement;
+        const isDark = html.getAttribute('data-theme') === 'dark';
+        const newTheme = isDark ? 'light' : 'dark';
+        html.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        document.getElementById('darkModeBtn').textContent = isDark ? '🌙' : '☀️';
+        refreshStyles(); // Update graph colors
+    };
+    
+    // Initialize theme from localStorage
+    (function initTheme() {
+        const saved = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = saved || (prefersDark ? 'dark' : 'light');
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            setTimeout(() => {
+                const btn = document.getElementById('darkModeBtn');
+                if (btn) btn.textContent = '☀️';
+            }, 0);
+        }
+    })();
+    
+    // Mobile menu toggle functions
+    window.toggleMobileMenu = function() {
+        document.body.classList.toggle('sidebar-open');
+    };
+    
+    window.closeMobileMenu = function() {
+        document.body.classList.remove('sidebar-open');
+    };
+    
+    // Close mobile menu when clicking on a dropdown item or button inside sidebar
+    document.addEventListener('click', function(e) {
+        // Close mobile menu when clicking outside the sidebar on mobile
+        if (window.innerWidth < 768 && document.body.classList.contains('sidebar-open')) {
+            const sidebar = document.getElementById('left');
+            const hamburger = document.querySelector('.hamburger-btn');
+            if (!sidebar.contains(e.target) && e.target !== hamburger) {
+                closeMobileMenu();
+            }
+        }
+    });
+    
+    // Search functionality
+    let searchTimeout;
+    window.handleSearch = function(query) {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const results = searchPersons(query);
+            updateSearchResults(results);
+        }, 200);
+    };
+    
+    window.clearSearchInput = function() {
+        document.getElementById('searchInput').value = '';
+        clearSearch();
+        document.getElementById('searchResults').innerHTML = '';
+        document.getElementById('searchResults').style.display = 'none';
+    };
+    
+    function updateSearchResults(results) {
+        const container = document.getElementById('searchResults');
+        if (!results || results.length === 0) {
+            container.innerHTML = results && results.length === 0 ? '<div class="search-no-results">No results found</div>' : '';
+            container.style.display = results && results.length === 0 ? 'block' : 'none';
+            return;
+        }
+        
+        container.style.display = 'block';
+        container.innerHTML = results.slice(0, 10).map(r => `
+            <div class="search-result-item" onclick="goToSearchResult('${r.id}')">
+                <span class="search-result-name">${r.name.replace(/\//g, '')}</span>
+                <span class="search-result-id">${r.id}</span>
+            </div>
+        `).join('') + (results.length > 10 ? `<div class="search-more">+${results.length - 10} more results</div>` : '');
+    }
+    
+    window.goToSearchResult = function(nodeId) {
+        centerOnSearchResult(nodeId);
+        document.getElementById('searchResults').style.display = 'none';
+    };
+    
+    // Expose centerOnSearchResult for use by family member navigation
+    window.centerOnSearchResult = centerOnSearchResult;
+    
+    function updatePersonSelector() {
+        const select = document.getElementById('focusPerson');
+        const individuals = getAllIndividuals();
+        
+        // Keep current selection if possible
+        const currentValue = select.value;
+        
+        // Clear and rebuild options
+        select.innerHTML = '<option value="">-- Show All --</option>';
+        individuals.forEach(person => {
+            const option = document.createElement('option');
+            option.value = person.id;
+            option.textContent = person.name.replace(/\//g, '');
+            select.appendChild(option);
+        });
+        
+        // Restore selection
+        if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
+            select.value = currentValue;
+        }
+    }
+
+    // ========== STORAGE MODE & AUTO-SAVE FUNCTIONALITY ==========
+    
+    // Storage modes: 'auto' | 'session' | 'export-only' | 'none'
+    // - auto: Save to localStorage automatically (default, convenient)
+    // - session: Keep in memory only, clear on browser close
+    // - export-only: No auto-save, user must export manually
+    // - none: No storage preference set, will ask on first import
+    let storageMode = localStorage.getItem('storageMode') || 'none';
+    let autoSaveTimeout = null;
+    let lastSavedContent = '';
+    let lastExportedContent = ''; // Track what was last exported
+    let hasUnsavedChanges = false;
+    let pendingImportFile = null; // Store file while showing import modal
+    
+    // Check if data has changed since last export
+    function checkUnsavedChanges() {
+        const currentContent = createFileContent();
+        hasUnsavedChanges = currentContent && currentContent !== lastExportedContent && currentContent.length > 100;
+        return hasUnsavedChanges;
+    }
+    
+    // Save data to localStorage (only if storage mode allows)
+    function saveToLocalStorage() {
+        if (storageMode !== 'auto') {
+            return; // Don't save if not in auto mode
+        }
+        try {
+            const content = createFileContent();
+            if (content && content !== lastSavedContent) {
+                localStorage.setItem('DataTillNow', content);
+                lastSavedContent = content;
+                console.log('Auto-saved at', new Date().toLocaleTimeString());
+            }
+        } catch (e) {
+            console.error('Auto-save failed:', e);
+        }
+    }
+    
+    // Debounced auto-save (waits 2 seconds after last change)
+    function triggerAutoSave() {
+        hasUnsavedChanges = true; // Mark as changed
+        if (storageMode !== 'auto') {
+            return; // Don't auto-save in other modes
+        }
+        if (autoSaveTimeout) {
+            clearTimeout(autoSaveTimeout);
+        }
+        autoSaveTimeout = setTimeout(saveToLocalStorage, 2000);
+    }
+    
+    // Expose for use by other functions
+    window.triggerAutoSave = triggerAutoSave;
+    
+    // Override functions that modify data to trigger auto-save
+    const originalAddNewNode = window.addNewNode;
+    window.addNewNode = function(typeOfNewNode) {
+        originalAddNewNode(typeOfNewNode);
+        triggerAutoSave();
+    };
+    
+    const originalDeleteNode = window.deleteNode;
+    window.deleteNode = function() {
+        originalDeleteNode();
+        triggerAutoSave();
+    };
+    
+    const originalHandleNodeValueChange = window.handleNodeValueChange;
+    window.handleNodeValueChange = function(key, event, familyRowCacheIndex) {
+        originalHandleNodeValueChange(key, event, familyRowCacheIndex);
+        triggerAutoSave();
+    };
+    
+    const originalHandleNodeValueWithNewNode = window.handleNodeValueWithNewNode;
+    window.handleNodeValueWithNewNode = function(key, event, parentCacheIndex) {
+        originalHandleNodeValueWithNewNode(key, event, parentCacheIndex);
+        triggerAutoSave();
+    };
+    
+    const originalHandleImgFileSelect = window.handleImgFileSelect;
+    window.handleImgFileSelect = function(event) {
+        originalHandleImgFileSelect(event);
+        // Delay auto-save for image to allow processing
+        setTimeout(triggerAutoSave, 500);
+    };
+    
+    // Periodic backup save every 30 seconds (only if in auto mode)
+    setInterval(() => {
+        if (storageMode === 'auto') {
+            saveToLocalStorage();
+        }
+    }, 30000);
+    
+    // Save when page visibility changes (only if in auto mode)
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden' && storageMode === 'auto') {
+            saveToLocalStorage();
+        }
+    });
+    
+    // Show import options modal
+    window.showImportOptionsModal = function(file) {
+        pendingImportFile = file;
+        const modal = document.getElementById('import-options-modal');
+        
+        // Pre-select current storage mode
+        const currentMode = storageMode === 'none' ? 'auto' : storageMode;
+        document.querySelector(`input[name="importStorageMode"][value="${currentMode}"]`).checked = true;
+        
+        modal.classList.add('active');
+    };
+    
+    window.closeImportOptionsModal = function() {
+        const modal = document.getElementById('import-options-modal');
+        modal.classList.remove('active');
+        pendingImportFile = null;
+    };
+    
+    window.proceedWithImport = async function() {
+        // Get selected storage mode
+        const selectedMode = document.querySelector('input[name="importStorageMode"]:checked').value;
+        const rememberChoice = document.getElementById('rememberStorageChoice').checked;
+        
+        // Update storage mode
+        storageMode = selectedMode;
+        if (rememberChoice) {
+            localStorage.setItem('storageMode', selectedMode);
+        }
+        
+        // Handle existing browser data based on mode
+        if (selectedMode === 'session' || selectedMode === 'export-only') {
+            // Clear existing localStorage data for these modes
+            localStorage.removeItem('DataTillNow');
+        }
+        
+        // Save file reference BEFORE closing modal (which clears pendingImportFile)
+        const fileToImport = pendingImportFile;
+        
+        // Close modal (just hide it, don't clear file yet)
+        const modal = document.getElementById('import-options-modal');
+        modal.classList.remove('active');
+        
+        // Now proceed with the actual import
+        if (fileToImport) {
+            showLoading('Importing file...');
+            try {
+                const fileType = fileToImport.name.toLowerCase();
+                if (fileType.endsWith('.ged') || fileType.endsWith('.gedcom')) {
+                    await processGedComFile(fileToImport);
+                } else if (fileType.endsWith('.csv')) {
+                    await processCsvFile(fileToImport);
+                } else if (fileType.endsWith('.json')) {
+                    await processJsonFile(fileToImport);
+                }
+                
+                // Track exported content for unsaved changes detection
+                lastExportedContent = createFileContent();
+                hasUnsavedChanges = false;
+                
+                refreshDiagram();
+            } catch (err) {
+                hideLoading();
+                alert('Error importing file: ' + err.message);
+            }
+        }
+        pendingImportFile = null;
+    };
+    
+    // Process file functions (used after storage mode is selected)
+    async function processGedComFile(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                importGedComText(e.target.result);
+                resolve();
+            };
+            reader.onerror = reject;
+            reader.readAsText(file);
+        });
+    }
+    
+    async function processCsvFile(file) {
+        const gedcomText = await importCSVFile(file);
+        importGedComText(gedcomText);
+    }
+    
+    async function processJsonFile(file) {
+        const text = await file.text();
+        const jsonData = JSON.parse(text);
+        
+        // Convert JSON to GEDCOM format
+        let gedcomText = '0 HEAD\n1 SOUR JSON Import\n1 GEDC\n2 VERS 5.5.1\n2 FORM LINEAGE-LINKED\n1 CHAR UTF-8\n';
+        
+        if (jsonData.individuals && Array.isArray(jsonData.individuals)) {
+            jsonData.individuals.forEach(ind => {
+                gedcomText += `0 ${ind.id} INDI\n`;
+                if (ind.name) gedcomText += `1 NAME ${ind.name}\n`;
+                if (ind.givenName) gedcomText += `2 GIVN ${ind.givenName}\n`;
+                if (ind.surname) gedcomText += `2 SURN ${ind.surname}\n`;
+                if (ind.sex) gedcomText += `1 SEX ${ind.sex}\n`;
+                if (ind.birth) {
+                    gedcomText += `1 BIRT\n`;
+                    if (ind.birth.date) gedcomText += `2 DATE ${ind.birth.date}\n`;
+                    if (ind.birth.place) gedcomText += `2 PLAC ${ind.birth.place}\n`;
+                }
+                if (ind.death) {
+                    gedcomText += `1 DEAT\n`;
+                    if (ind.death.date) gedcomText += `2 DATE ${ind.death.date}\n`;
+                    if (ind.death.place) gedcomText += `2 PLAC ${ind.death.place}\n`;
+                }
+                if (ind.familyAsSpouse) {
+                    ind.familyAsSpouse.forEach(fid => {
+                        gedcomText += `1 FAMS ${fid}\n`;
+                    });
+                }
+                if (ind.familyAsChild) {
+                    ind.familyAsChild.forEach(fid => {
+                        gedcomText += `1 FAMC ${fid}\n`;
+                    });
+                }
+                if (ind.image) gedcomText += `1 IMG ${ind.image}\n`;
+            });
+        }
+        
+        if (jsonData.families && Array.isArray(jsonData.families)) {
+            jsonData.families.forEach(fam => {
+                gedcomText += `0 ${fam.id} FAM\n`;
+                if (fam.husband) {
+                    const husbands = Array.isArray(fam.husband) ? fam.husband : [fam.husband];
+                    husbands.forEach(h => gedcomText += `1 HUSB ${h}\n`);
+                }
+                if (fam.wife) {
+                    const wives = Array.isArray(fam.wife) ? fam.wife : [fam.wife];
+                    wives.forEach(w => gedcomText += `1 WIFE ${w}\n`);
+                }
+                if (fam.children) {
+                    fam.children.forEach(c => gedcomText += `1 CHIL ${c}\n`);
+                }
+                if (fam.marriage) {
+                    gedcomText += `1 MARR\n`;
+                    if (fam.marriage.date) gedcomText += `2 DATE ${fam.marriage.date}\n`;
+                    if (fam.marriage.place) gedcomText += `2 PLAC ${fam.marriage.place}\n`;
+                }
+            });
+        }
+        
+        gedcomText += '0 TRLR\n';
+        importGedComText(gedcomText);
+    }
+    
+    // Modified file handlers to show import options modal
+    window.handleGedComFileSelect = async function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        event.target.value = ''; // Reset input
+        showImportOptionsModal(file);
+    };
+    
+    window.handleCsvFileSelect = async function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        event.target.value = ''; // Reset input
+        showImportOptionsModal(file);
+    };
+    
+    window.handleJsonFileSelect = async function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        event.target.value = ''; // Reset input
+        showImportOptionsModal(file);
+    };
+    
+    // Mark content as exported (for unsaved changes tracking)
+    window.markAsExported = function() {
+        lastExportedContent = createFileContent();
+        hasUnsavedChanges = false;
+    };
+    
+    // Override export to track last exported content
+    const _originalExportFileNow = window.exportFileNow;
+    window.exportFileNow = function() {
+        _originalExportFileNow();
+        markAsExported();
+    };
+    
+    const _originalExportJsonNow = window.exportJsonNow;
+    window.exportJsonNow = function() {
+        _originalExportJsonNow();
+        markAsExported();
+    };
+    
+    // Clear all browser data
+    window.clearBrowserData = function() {
+        if (confirm('⚠️ Clear all data stored in this browser?\\n\\nThis will remove:\\n• Saved family tree data\\n• Storage preferences\\n\\nThis cannot be undone!')) {
+            localStorage.removeItem('DataTillNow');
+            localStorage.removeItem('storageMode');
+            storageMode = 'none';
+            lastSavedContent = '';
+            lastExportedContent = '';
+            hasUnsavedChanges = false;
+            
+            // Clear the diagram
+            document.dataParsed = null;
+            refreshDiagram();
+            
+            alert('✅ All browser data cleared successfully.');
+        }
+    };
+    
+    // Show unsaved changes warning modal
+    window.showUnsavedChangesModal = function(action) {
+        const modal = document.getElementById('unsaved-changes-modal');
+        modal.dataset.pendingAction = action;
+        modal.classList.add('active');
+    };
+    
+    window.closeUnsavedChangesModal = function() {
+        const modal = document.getElementById('unsaved-changes-modal');
+        modal.classList.remove('active');
+    };
+    
+    window.exportAndContinue = function() {
+        exportFileNow();
+        closeUnsavedChangesModal();
+    };
+    
+    window.discardChangesAndContinue = function() {
+        hasUnsavedChanges = false;
+        closeUnsavedChangesModal();
+    };
+    
+    // Show storage settings modal
+    window.showStorageSettings = function() {
+        const modal = document.getElementById('storage-settings-modal');
+        const currentMode = storageMode === 'none' ? 'auto' : storageMode;
+        document.querySelector(`input[name="storageSettingsMode"][value="${currentMode}"]`).checked = true;
+        modal.classList.add('active');
+    };
+    
+    window.closeStorageSettings = function() {
+        const modal = document.getElementById('storage-settings-modal');
+        modal.classList.remove('active');
+    };
+    
+    window.saveStorageSettings = function() {
+        const selectedMode = document.querySelector('input[name="storageSettingsMode"]:checked').value;
+        storageMode = selectedMode;
+        localStorage.setItem('storageMode', selectedMode);
+        
+        // If switching away from auto, clear localStorage data
+        if (selectedMode !== 'auto') {
+            localStorage.removeItem('DataTillNow');
+        } else {
+            // If switching to auto, save current data
+            saveToLocalStorage();
+        }
+        
+        closeStorageSettings();
+        alert(`✅ Storage mode changed to: ${getStorageModeLabel(selectedMode)}`);
+    };
+    
+    function getStorageModeLabel(mode) {
+        const labels = {
+            'auto': 'Auto-save to browser',
+            'session': 'Session only (no persistence)',
+            'export-only': 'Export only (manual save)'
+        };
+        return labels[mode] || mode;
+    }
+    // ========== END STORAGE MODE & AUTO-SAVE FUNCTIONALITY ==========
+
+    window.addEventListener('load', function () {
+        // Only load from localStorage if in auto mode
+        if (storageMode === 'auto') {
+            const storedData = localStorage.getItem('DataTillNow');
+            if (storedData) {
+                importGedComText(storedData);
+                lastSavedContent = storedData;
+                lastExportedContent = storedData; // Treat loaded data as "exported"
+            }
+        }
+        refreshDiagram();
+    });
+
+    window.addEventListener('beforeunload', function (event) {
+        // Final save if in auto mode
+        if (storageMode === 'auto') {
+            saveToLocalStorage();
+        }
+        
+        // Show warning if there are unsaved changes in session/export-only modes
+        if ((storageMode === 'session' || storageMode === 'export-only') && checkUnsavedChanges()) {
+            const message = '⚠️ You have unsaved changes! Export your data before leaving to avoid losing it.';
+            event.preventDefault();
+            event.returnValue = message;
+            return message;
+        }
+    });
 </script>
-<style>
-  .header2 {
-    padding: 20px 10px 40px 30px;
-    background-color: #F0F0F8;
-  }
-  .menu {
-    float: right;
-    padding: 1px 30px 10px 10px;
-  }
-  .menu1 {
-    font-weight: bold;
-    float: left;
-  }
-  .headerlink {
-    text-decoration: none;
-    font-size: small;
-  }
-  .content {
-    padding: 0 0;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.2s ease-out;
-  }
-  .input {
-    width: 25%;
-    min-width: 300px;
-    max-width: 100%;
-    height: 45px;
-    margin: 5px;
-    padding: .5em;
-    border-radius: 9px;
-    border: dodgerblue solid 1px;
-    font-size: larger;
-  }
-  h1 {
-    color: #212529;
-    font-size: larger;
-  }
-  select {
-    width: 25%;
-    min-width: 300px;
-    max-width: 100%;
-    height: 45px;
-    margin: 5px;
-    font-size: medium;
-    padding: .5em;
-    border-radius: 9px;
-  }
-  label {
-    font-size: large;
-    display: block;
-    height: 10px;
-    margin: 5px;
-  }
-  td {
-    padding: 7px;
-  }
-  button.action {
-    width: 10%;
-    padding: .8em;
-    border-radius: 9px;
-    background-color: #002060;
-    color: white;
-    font-weight: bold;
-    float: bottom;
-    min-width: 144px;
-    margin-bottom: 5px;
-  }
-  button.action:hover {
-    background-color: #503090;
-    box-shadow: 2px 2px #002060;
-    transform: translate3d(2,2,2px);
-  }
-  button.action:active {
-    background-color: aliceblue;
-    color: #002060;
-    box-shadow: 4px 4px #002060;
-    transform: translate3d(4,4,4px);
-  }
-  .available {
-    background-color: greenyellow;
-  }
-  .not-available {
-    background-color: gray;
-    color: white;
-  }
-  .available-filtered {
-    background-color: lightblue;
-  }
-  .header {
-    background-color: white;
-  }
-  /* For the tab above*/
-  .tab {
-    overflow: hidden;
-    font-weight: bold;
-    border: 1px solid #002060;
-    background-color: white;
-    width: 331px;
-    border-radius: 25px;
-  }
-  .tab button {
-    font-weight: bold;
-    margin-left: -20px;
-    border-radius: 20px;
-    float: left;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    padding: 14px 30px;
-    transition: 0.3s;
-    font-size: medium;
-    background-color: white;
-    color: #002060;
-  }
-  .tab button:hover {
-    background-color: #ddd;
-  }
-  .tab button.active {
-    background-color: #002060;
-    color: white;
-  }
-  .tabcontent {
-    display: none;
-    -webkit-animation: fadeEffect 1s;
-    animation: fadeEffect 1s;
-  }
-  body {
-    font-family: Helvetica,serif;
-  }
-  hr {
-    height:1px;
-    border: none;
-  }
-  @media only screen and (max-width: 650px) {
-    hr {background-color: #002060;}
-  }
-  @media only screen and (min-width: 650px) and (max-width: 1200px) {
-    hr {background-image: linear-gradient(to right, #3160A0, white);}
-  }
-  @media only screen and (min-width: 1200px) {
-    hr {background-image: linear-gradient(to right, #3160A0, white, white);}
-  }
-  button.footer_button {
-    width: fit-content;
-    min-width: 100px;
-    border-width: 1px;
-    height: 38px;
-    color: #002060;
-    background-color: white;
-  }
-  button.footer_button:hover {
-    color: white;
-  }
-  body {
-    opacity: 85%;
-  }
-   div {
-     visibility: hidden;
-   }
-  div.header2,div.menu,div.menu1,div.action,div.actions,div.tabcontent,div.tab,div.content,div.status,div.filters{
-    visibility: visible;
-  }
-  button.filter_value {
-    background-color: white;
-    padding: 3px 7px;
-    margin-bottom: 5px;
-    border-radius: 6px;
-    border-width: 1px;
-  }
-  button.filter_value.selected {
-    background-color: #002060;
-    color: white;
-    border-radius: 10px;
-    box-shadow: 2px 2px black;
-  }
-</style>
-<button class="action footer_button" onclick="window.open('https://youtu.be/1rSIRjOLtZU','_blank')">Help</button>
-<button class="action footer_button" onclick="window.open('https://www.youtube.com/channel/UCCdbe2G0yiy05t4DcsWypqg','_blank')">♥ Subscribe & Support ♥</button>
-<!--DONATION<form><script src="https://checkout.razorpay.com/v1/payment-button.js" data-payment_button_id="pl_HAkH2bxjogqa0E" async> </script> </form>-->
+
+<!-- Loading Overlay -->
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text">Processing...</div>
+</div>
+
+<!-- Export Image Modal -->
+<div id="export-image-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 320px;">
+        <div class="modal-header">
+            <h2>Export as Image</h2>
+            <button class="modal-close" onclick="closeExportImageModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text-muted); margin-bottom: 16px;">Choose an image format to download:</p>
+            <div class="btn-group" style="flex-direction: column; gap: 12px;">
+                <button class="btn-primary" onclick="exportPng(); closeExportImageModal();">
+                    <span>📷</span> Download PNG (High Quality)
+                </button>
+                <button class="btn-outline" onclick="exportSvg(); closeExportImageModal();">
+                    <span>📐</span> Download SVG (Vector)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Modal -->
+<div id="statistics-modal" class="modal-overlay">
+    <div class="modal-content statistics-modal">
+        <div class="modal-header">
+            <h2>📊 Family Statistics</h2>
+            <button class="modal-close" onclick="closeStatisticsModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="statistics-content">
+            <!-- Content populated by JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Duplicates Modal -->
+<div id="duplicates-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 500px; max-width: 95%;">
+        <div class="modal-header">
+            <h2>👥 Potential Duplicates</h2>
+            <button class="modal-close" onclick="closeDuplicatesModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="duplicates-content" style="max-height: 400px; overflow-y: auto;">
+            <!-- Content populated by JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Timeline Modal -->
+<div id="timeline-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 550px; max-width: 95%;">
+        <div class="modal-header">
+            <h2>📅 Family Timeline</h2>
+            <button class="modal-close" onclick="closeTimelineModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="timeline-content" style="max-height: 500px; overflow-y: auto;">
+            <!-- Content populated by JavaScript -->
+        </div>
+    </div>
+</div>
+
+<!-- Relationship Calculator Modal -->
+<div id="relationship-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 450px; max-width: 95%;">
+        <div class="modal-header">
+            <h2>🔗 Relationship Calculator</h2>
+            <button class="modal-close" onclick="closeRelationshipModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Person 1</label>
+                <select id="relPerson1" class="rel-select"></select>
+            </div>
+            <div class="form-group">
+                <label>Person 2</label>
+                <select id="relPerson2" class="rel-select"></select>
+            </div>
+            <button class="btn-primary" onclick="calculateRel()" style="width: 100%;">
+                Calculate Relationship
+            </button>
+            <div id="relationship-result" style="margin-top: 16px;">
+                <!-- Result displayed here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Share Modal -->
+<div id="share-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 500px; max-width: 95%;">
+        <div class="modal-header">
+            <h2>📤 Share Family Tree</h2>
+            <button class="modal-close" onclick="closeShareModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Share Link</label>
+                <div class="share-input">
+                    <input type="text" id="shareUrl" readonly>
+                    <button class="btn-primary btn-sm" onclick="copyShareUrl()">Copy</button>
+                </div>
+                <small style="color: var(--text-muted);">Note: Large trees cannot be shared via URL. Export the file instead.</small>
+            </div>
+            <hr>
+            <div class="form-group">
+                <label>Embed Code</label>
+                <div class="embed-code" id="embedCode"></div>
+                <button class="btn-outline btn-sm" onclick="copyEmbedCode()" style="margin-top: 8px;">Copy Embed Code</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image Crop Modal -->
+<div id="crop-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 420px; max-width: 95%;">
+        <div class="modal-header">
+            <h2>✂️ Crop Photo</h2>
+            <button class="modal-close" onclick="closeCropModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="crop-container" id="cropContainer">
+                <img id="cropImage" class="crop-image" alt="Image to crop">
+                <div class="crop-overlay">
+                    <div id="cropBox" class="crop-box">
+                        <div class="crop-handle nw" data-handle="nw"></div>
+                        <div class="crop-handle ne" data-handle="ne"></div>
+                        <div class="crop-handle sw" data-handle="sw"></div>
+                        <div class="crop-handle se" data-handle="se"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="crop-info">
+                <span>Drag to move • Corners to resize</span>
+                <div class="crop-preview" id="cropPreview">
+                    <img id="previewImg" alt="Preview">
+                </div>
+            </div>
+            <div class="crop-actions">
+                <button class="btn-outline" onclick="closeCropModal()">Cancel</button>
+                <button class="btn-primary" onclick="applyCrop()">✓ Apply & Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Options Modal -->
+<div id="import-options-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 420px; max-width: 95%;">
+        <div class="modal-header">
+            <h2>📁 Import Settings</h2>
+            <button class="modal-close" onclick="closeImportOptionsModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text-muted); margin-bottom: 16px;">
+                How would you like to handle data storage?
+            </p>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <label class="storage-option" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: var(--bg-light); border-radius: 8px; cursor: pointer; border: 2px solid transparent;">
+                    <input type="radio" name="importStorageMode" value="auto" style="margin-top: 2px;">
+                    <div>
+                        <strong style="display: block; color: var(--text-dark);">💾 Auto-save to browser</strong>
+                        <small style="color: var(--text-muted);">Data persists after closing. Convenient but stored locally.</small>
+                    </div>
+                </label>
+                
+                <label class="storage-option" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: var(--bg-light); border-radius: 8px; cursor: pointer; border: 2px solid transparent;">
+                    <input type="radio" name="importStorageMode" value="session">
+                    <div>
+                        <strong style="display: block; color: var(--text-dark);">🔒 Session only (more secure)</strong>
+                        <small style="color: var(--text-muted);">Data cleared when you close the browser. Export to save.</small>
+                    </div>
+                </label>
+                
+                <label class="storage-option" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: var(--bg-light); border-radius: 8px; cursor: pointer; border: 2px solid transparent;">
+                    <input type="radio" name="importStorageMode" value="export-only">
+                    <div>
+                        <strong style="display: block; color: var(--text-dark);">📤 Export only (most secure)</strong>
+                        <small style="color: var(--text-muted);">No auto-save at all. You must export manually to keep changes.</small>
+                    </div>
+                </label>
+            </div>
+            
+            <label style="display: flex; align-items: center; gap: 8px; margin-top: 16px; cursor: pointer;">
+                <input type="checkbox" id="rememberStorageChoice" style="width: 18px; height: 18px;">
+                <span style="color: var(--text-muted); font-size: 0.9rem;">Remember my choice for future imports</span>
+            </label>
+            
+            <div style="display: flex; gap: 12px; margin-top: 20px;">
+                <button class="btn-outline" onclick="closeImportOptionsModal()" style="flex: 1;">Cancel</button>
+                <button class="btn-primary" onclick="proceedWithImport()" style="flex: 1;">Import File</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Unsaved Changes Warning Modal -->
+<div id="unsaved-changes-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 400px; max-width: 95%;">
+        <div class="modal-header">
+            <h2>⚠️ Unsaved Changes</h2>
+            <button class="modal-close" onclick="closeUnsavedChangesModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text-dark); margin-bottom: 16px;">
+                You have unsaved changes that will be lost if you leave this page!
+            </p>
+            <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">
+                Export your family tree to a file to keep your changes permanently.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn-primary" onclick="exportAndContinue()">
+                    📤 Export Now
+                </button>
+                <button class="btn-danger" onclick="discardChangesAndContinue()">
+                    🗑️ Discard Changes
+                </button>
+                <button class="btn-outline" onclick="closeUnsavedChangesModal()">
+                    ← Stay on Page
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Storage Settings Modal -->
+<div id="storage-settings-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 420px; max-width: 95%;">
+        <div class="modal-header">
+            <h2>🔐 Data Storage Settings</h2>
+            <button class="modal-close" onclick="closeStorageSettings()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text-muted); margin-bottom: 16px;">
+                Choose how your family tree data is stored:
+            </p>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <label class="storage-option" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: var(--bg-light); border-radius: 8px; cursor: pointer;">
+                    <input type="radio" name="storageSettingsMode" value="auto" style="margin-top: 2px;">
+                    <div>
+                        <strong style="display: block; color: var(--text-dark);">💾 Auto-save to browser</strong>
+                        <small style="color: var(--text-muted);">Data persists after closing browser.</small>
+                    </div>
+                </label>
+                
+                <label class="storage-option" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: var(--bg-light); border-radius: 8px; cursor: pointer;">
+                    <input type="radio" name="storageSettingsMode" value="session" style="margin-top: 2px;">
+                    <div>
+                        <strong style="display: block; color: var(--text-dark);">🔒 Session only</strong>
+                        <small style="color: var(--text-muted);">Data cleared when browser closes.</small>
+                    </div>
+                </label>
+                
+                <label class="storage-option" style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: var(--bg-light); border-radius: 8px; cursor: pointer;">
+                    <input type="radio" name="storageSettingsMode" value="export-only" style="margin-top: 2px;">
+                    <div>
+                        <strong style="display: block; color: var(--text-dark);">📤 Export only</strong>
+                        <small style="color: var(--text-muted);">No auto-save. Manual export required.</small>
+                    </div>
+                </label>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 12px; background: var(--warning); background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid var(--warning);">
+                <p style="color: var(--text-dark); font-size: 0.85rem; margin: 0;">
+                    ⚠️ <strong>Privacy Note:</strong> Data stored in your browser can be accessed by anyone with physical access to this device.
+                </p>
+            </div>
+            
+            <div style="display: flex; gap: 12px; margin-top: 20px;">
+                <button class="btn-outline" onclick="closeStorageSettings()" style="flex: 1;">Cancel</button>
+                <button class="btn-primary" onclick="saveStorageSettings()" style="flex: 1;">Save Settings</button>
+            </div>
+            
+            <hr style="margin: 20px 0;">
+            
+            <button class="btn-danger" onclick="clearBrowserData()" style="width: 100%;">
+                🗑️ Clear All Browser Data
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile menu button (bottom sheet trigger) -->
+<button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Open menu">
+    <span style="font-size: 1.3rem;">⚙️</span>
+</button>
+
+<!-- Sidebar backdrop for mobile -->
+<div id="sidebar-backdrop" onclick="closeMobileMenu()"></div>
+
+<div id="graph-container" style="position: relative; flex-grow: 2;">
+    <div id="cy"></div>
+    
+    <!-- Floating Graph Controls -->
+    <div class="graph-controls">
+        <div class="graph-controls-row">
+            <button class="graph-btn" onclick="zoomIn()" title="Zoom In">+</button>
+            <button class="graph-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+            <button class="graph-btn" onclick="fitToScreen()" title="Fit to Screen">⊡</button>
+        </div>
+        <div class="graph-controls-row">
+            <button class="graph-btn" onclick="resetFilter()" title="Reset View">↺</button>
+            <button class="graph-btn" onclick="arrangeNodes()" title="Arrange Nodes">↔</button>
+            <button class="graph-btn" id="graphDragBtn" onclick="toggleDrag()" title="Toggle Drag">✋</button>
+        </div>
+        <div class="graph-controls-row">
+            <button class="graph-btn" onclick="showStatistics()" title="Statistics">📊</button>
+            <button class="graph-btn" onclick="showTimeline()" title="Timeline">📅</button>
+            <button class="graph-btn" onclick="showRelationshipCalc()" title="Relationship">🔗</button>
+        </div>
+    </div>
+</div>
+
+<div id="left">
+    <div class="header">
+        <h1>🌳 Family Tree</h1>
+        <div class="header-actions">
+            <button class="btn-icon" onclick="showShortcutsHelp()" title="Keyboard shortcuts (?)" id="shortcutsBtn">⌨️</button>
+            <button class="btn-icon" onclick="toggleDarkMode()" title="Toggle dark mode (D)" id="darkModeBtn">🌙</button>
+            <button class="sidebar-close-btn" onclick="closeMobileMenu()" title="Close menu">✕</button>
+        </div>
+    </div>
+    
+    <!-- Search Section - Always visible -->
+    <div class="sidebar-section">
+        <div class="section-header"><span>🔍 Search</span></div>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search by name, date, place..." 
+                   oninput="handleSearch(this.value)" autocomplete="off">
+            <button class="search-clear" onclick="clearSearchInput()" title="Clear search">&times;</button>
+        </div>
+        <div id="searchResults" class="search-results"></div>
+    </div>
+    
+    <!-- File Section -->
+    <div class="sidebar-section">
+        <div class="section-header"><span>📁 File</span></div>
+        <div class="btn-group">
+            <div class="dropdown">
+                <button class="btn-primary dropdown-toggle" title="Import options">
+                    <span>↑</span> Import
+                </button>
+                <div class="dropdown-menu">
+                    <button onclick="document.getElementById('fileInputGed').click()">📄 GEDCOM (.ged) <small style="color:var(--success);font-weight:600;">★ Recommended</small></button>
+                    <button onclick="document.getElementById('fileInputCsv').click()">📊 CSV Spreadsheet</button>
+                    <button onclick="document.getElementById('fileInputJson').click()">{ } JSON</button>
+                    <hr style="margin: 4px 0; border: none; border-top: 1px solid var(--border);">
+                    <button onclick="showCSVImportHelp()">❓ CSV Format Help</button>
+                </div>
+            </div>
+            <input type="file" id="fileInputGed" class="file-input-hidden" accept=".ged,.gedcom" onchange="handleGedComFileSelect(event)">
+            <input type="file" id="fileInputCsv" class="file-input-hidden" accept=".csv" onchange="handleCsvFileSelect(event)">
+            <input type="file" id="fileInputJson" class="file-input-hidden" accept=".json" onchange="handleJsonFileSelect(event)">
+            <div class="dropdown">
+                <button class="btn-success dropdown-toggle" title="Export & Share options">
+                    <span>↓</span> Export / Share
+                </button>
+                <div class="dropdown-menu">
+                    <button onclick="exportFileNow()">📄 GEDCOM</button>
+                    <button onclick="exportJsonNow()">{ } JSON</button>
+                    <button onclick="showExportImageModal()">🖼️ Image</button>
+                    <button onclick="printTree()">🖨️ Print</button>
+                    <button onclick="showShareModal()">📤 Share</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filter/Navigation Section -->
+    <div class="sidebar-section">
+        <div class="section-header"><span>📍 Filter & Navigate</span></div>
+        <div class="filter-row">
+            <select id="focusPerson" title="Focus on Person">
+                <option value="">-- Show All --</option>
+            </select>
+            <input type="number" id="genCount" value="3" min="1" max="99" title="Generations" class="gen-input">
+            <button class="btn-primary btn-sm" onclick="applyFilter()" title="Apply Filter">✓</button>
+            <button class="btn-outline btn-sm" onclick="resetFilter()" title="Reset Filter">↺</button>
+        </div>
+        <div class="zoom-controls" style="margin-top: 8px;">
+            <button class="btn-outline" onclick="zoomIn()" title="Zoom In (+)">+</button>
+            <button class="btn-outline" onclick="zoomOut()" title="Zoom Out (-)">−</button>
+            <button class="btn-outline" onclick="fitToScreen()" title="Fit to Screen (F)">⊡</button>
+            <button class="btn-outline" onclick="arrangeNodes()" title="Re-arrange nodes">↔</button>
+            <button class="btn-outline" id="dragToggleBtn" onclick="toggleDrag()" title="Toggle drag mode">✋</button>
+        </div>
+    </div>
+    
+    <!-- Selected Person Section - Hidden by default, shown on node click -->
+    <div class="card" id="selected-person-card">
+        <div id="selected_data">
+            <p class="placeholder-text">Click on a person in the tree to view and edit their details</p>
+        </div>
+        <div id="selected_options" style="display:none;"></div>
+    </div>
+    
+    <!-- More Tools Section - Collapsible -->
+    <details class="collapsible-section">
+        <summary><span>🛠️ More Tools</span></summary>
+        <div class="details-content">
+            <div class="compact-btn-grid">
+                <button class="btn-outline btn-sm" id="undoBtn" onclick="performUndo()" disabled title="Undo (Ctrl+Z)">
+                    <span>↩</span> Undo
+                </button>
+                <button class="btn-outline btn-sm" id="redoBtn" onclick="performRedo()" disabled title="Redo (Ctrl+Y)">
+                    <span>↪</span> Redo
+                </button>
+                <button class="btn-outline btn-sm" onclick="refreshDiagram()" title="Refresh diagram">
+                    <span>⟳</span> Refresh
+                </button>
+                <button class="btn-outline btn-sm" onclick="showStatistics()" title="View statistics">
+                    <span>📊</span> Stats
+                </button>
+                <button class="btn-outline btn-sm" onclick="showDuplicates()" title="Find duplicates">
+                    <span>👥</span> Duplicates
+                </button>
+                <button class="btn-outline btn-sm" onclick="showTimeline()" title="View timeline">
+                    <span>📅</span> Timeline
+                </button>
+                <button class="btn-outline btn-sm" onclick="showRelationshipCalc()" title="Calculate relationship">
+                    <span>🔗</span> Relationship
+                </button>
+                <button class="btn-outline btn-sm" onclick="showStorageSettings()" title="Data storage settings">
+                    <span>🔐</span> Storage
+                </button>
+                <button class="btn-outline btn-sm" onclick="alert('Features:\n\n• No data sent to server - works offline\n• Data stored locally in browser\n• Photos embedded in export file\n• Universal GEDCOM format export')" title="About">
+                    <span>ℹ️</span> About
+                </button>
+            </div>
+        </div>
+    </details>
+</div>
 </body>
 </html>

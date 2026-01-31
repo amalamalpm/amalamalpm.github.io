@@ -1,0 +1,38 @@
+{
+  "name": "GEDCOM Family Tree Editor",
+  "short_name": "Family Tree",
+  "description": "A privacy-focused, offline-first family tree viewer and editor. Import GEDCOM files, visualize relationships, add photos, and export your genealogy data.",
+  "version": "1.0.0",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "orientation": "any",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌳</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities", "lifestyle"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Import File",
+      "short_name": "Import",
+      "description": "Import a GEDCOM file",
+      "url": "/index.html?action=import"
+    },
+    {
+      "name": "Export File",
+      "short_name": "Export",
+      "description": "Export your family tree",
+      "url": "/index.html?action=export"
+    }
+  ]
+}
