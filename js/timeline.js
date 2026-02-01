@@ -1,6 +1,9 @@
 /**
+ * GEDCOM Family Tree Editor
+ * Copyright (c) 2024-2026 amalamalpm
+ * Licensed under MIT License - see LICENSE.txt
+ * 
  * Timeline Visualization Module
- * Displays family events in chronological order
  */
 
 /**
@@ -73,21 +76,46 @@ function extractEvents() {
   if (gedcomData.families) {
     gedcomData.families.forEach((family, id) => {
       if (family.MARR?.DATE?.value) {
-        let couple = '';
+        let husbandName = '';
+        let wifeName = '';
+        
+        // Get husband name (handle both array and single object)
         if (family.HUSB) {
-          const husb = gedcomData.indviduals.get(family.HUSB.id);
-          couple = husb?.NAME?.value?.replace(/\//g, ' ').trim() || '';
+          const husbList = Array.isArray(family.HUSB) ? family.HUSB : [family.HUSB];
+          const husbNames = husbList.map(h => {
+            const husb = gedcomData.indviduals.get(h.id);
+            return husb?.NAME?.value?.replace(/\//g, ' ').trim() || '';
+          }).filter(n => n);
+          husbandName = husbNames.join(', ');
         }
+        
+        // Get wife name (handle both array and single object)
         if (family.WIFE) {
-          const wife = gedcomData.indviduals.get(family.WIFE.id);
-          couple += (couple ? ' & ' : '') + (wife?.NAME?.value?.replace(/\//g, ' ').trim() || '');
+          const wifeList = Array.isArray(family.WIFE) ? family.WIFE : [family.WIFE];
+          const wifeNames = wifeList.map(w => {
+            const wife = gedcomData.indviduals.get(w.id);
+            return wife?.NAME?.value?.replace(/\//g, ' ').trim() || '';
+          }).filter(n => n);
+          wifeName = wifeNames.join(', ');
+        }
+        
+        // Build couple display string
+        let couple = '';
+        if (husbandName && wifeName) {
+          couple = `${husbandName} 💍 ${wifeName}`;
+        } else if (husbandName) {
+          couple = husbandName;
+        } else if (wifeName) {
+          couple = wifeName;
+        } else {
+          couple = 'Unknown couple';
         }
         
         events.push({
           date: family.MARR.DATE.value,
           year: extractYear(family.MARR.DATE.value),
           type: 'Marriage',
-          person: couple || 'Unknown',
+          person: couple,
           personId: id,
           place: family.MARR.PLAC?.value || '',
           icon: '💒'

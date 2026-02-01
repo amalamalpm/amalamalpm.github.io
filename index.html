@@ -1,3 +1,8 @@
+<!--
+  GEDCOM Family Tree Editor
+  Copyright (c) 2024-2026 amalamalpm
+  Licensed under MIT License - see LICENSE.txt
+-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,6 +28,7 @@
         :root {
             --primary: #2563eb;
             --primary-dark: #1d4ed8;
+            --primary-light: #dbeafe;
             --secondary: #64748b;
             --success: #10b981;
             --danger: #ef4444;
@@ -32,6 +38,9 @@
             --border: #e2e8f0;
             --text-dark: #1e293b;
             --text-muted: #64748b;
+            --input-bg: #ffffff;
+            --tab-inactive-bg: #eef2f7;
+            --tab-inactive-border: #d1d9e6;
             --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
             --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
             --graph-bg: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
@@ -45,6 +54,7 @@
         [data-theme="dark"] {
             --primary: #3b82f6;
             --primary-dark: #2563eb;
+            --primary-light: #1e3a5f;
             --secondary: #94a3b8;
             --success: #34d399;
             --danger: #f87171;
@@ -54,6 +64,9 @@
             --border: #334155;
             --text-dark: #f1f5f9;
             --text-muted: #94a3b8;
+            --input-bg: #1e293b;
+            --tab-inactive-bg: #2d3a4f;
+            --tab-inactive-border: #475569;
             --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
             --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -2px rgba(0,0,0,0.2);
             --graph-bg: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
@@ -365,7 +378,7 @@
             font-size: 0.95rem;
             border: 1px solid var(--border);
             border-radius: 8px;
-            background: var(--bg-light);
+            background: var(--input-bg);
             color: var(--text-dark);
             transition: border-color 0.15s ease, box-shadow 0.15s ease;
             box-sizing: border-box;
@@ -486,6 +499,105 @@
             min-width: 36px;
         }
         
+        /* Searchable Select Dropdown */
+        .searchable-select {
+            position: relative;
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .searchable-select input[type="text"] {
+            width: 100%;
+            padding: 8px 10px;
+            font-size: 0.85rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--input-bg);
+            color: var(--text-dark);
+        }
+        
+        .searchable-select input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .searchable-select-list {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 250px;
+            overflow-y: auto;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: var(--shadow-lg);
+            z-index: 200;
+            margin-top: 4px;
+        }
+        
+        .searchable-select-list.open {
+            display: block;
+        }
+        
+        .searchable-select-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-dark);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .searchable-select-item:last-child {
+            border-bottom: none;
+        }
+        
+        .searchable-select-item:hover,
+        .searchable-select-item.selected {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .searchable-select-item .item-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .searchable-select-item .item-id {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-left: 8px;
+        }
+        
+        .searchable-select-empty {
+            padding: 12px;
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+        
+        .searchable-select-show-all {
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--primary);
+            background: var(--bg-light);
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .searchable-select-show-all:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
         /* Details list */
         .familyNodeDetails {
             list-style-type: none;
@@ -508,7 +620,7 @@
             gap: 16px;
             margin: 8px 0;
             padding: 10px 12px;
-            background: var(--bg-light);
+            background: var(--input-bg);
             border-radius: 8px;
             border: 1px solid var(--border);
         }
@@ -553,28 +665,31 @@
             flex: 1;
             min-width: 0;
             padding: 8px 6px;
-            background: transparent;
-            border: none;
+            background: var(--tab-inactive-bg);
+            border: 1px solid var(--tab-inactive-border);
             border-radius: 6px;
             cursor: pointer;
             font-size: 0.7rem;
             font-weight: 600;
-            color: var(--text-muted);
+            color: var(--text-dark);
             transition: all 0.2s ease;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 2px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
         
         .person-tab:hover {
             color: var(--text-dark);
-            background: var(--bg-card);
+            background: var(--primary-light, #dbeafe);
+            border-color: var(--primary);
         }
         
         .person-tab.active {
             color: white;
             background: var(--primary);
+            border-color: var(--primary);
             box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
         }
         
@@ -951,20 +1066,24 @@
                 order: 2;
             }
             
-            #left .sidebar-section:nth-of-type(1) { /* Search */
+            #add-relative-card {
                 order: 3;
             }
             
-            #left .sidebar-section:nth-of-type(2) { /* File */
-                order: 5;
-            }
-            
-            #left .sidebar-section:nth-of-type(3) { /* Filter */
+            #left .sidebar-section:nth-of-type(1) { /* Search */
                 order: 4;
             }
             
-            #left details.collapsible-section { /* More Tools */
+            #left .sidebar-section:nth-of-type(2) { /* File */
                 order: 6;
+            }
+            
+            #left .sidebar-section:nth-of-type(3) { /* Filter */
+                order: 5;
+            }
+            
+            #left details.collapsible-section { /* More Tools */
+                order: 7;
             }
         }
         
@@ -993,6 +1112,10 @@
         /* Section styles */
         .sidebar-section {
             margin-bottom: 16px;
+            padding: 14px;
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 10px;
         }
         
         .section-header {
@@ -1001,12 +1124,10 @@
             justify-content: space-between;
             font-size: 0.75rem;
             font-weight: 700;
-            color: var(--text-muted);
+            color: var(--text-dark);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 10px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid var(--border);
+            margin-bottom: 12px;
         }
         
         .section-header span {
@@ -1127,13 +1248,25 @@
         }
         
         /* Selected person card - hidden by default */
-        #selected-person-card {
+        #selected-person-card,
+        #add-relative-card {
             display: none;
             animation: slideIn 0.2s ease;
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 16px;
         }
         
-        #selected-person-card.visible {
+        #selected-person-card.visible,
+        #add-relative-card.visible {
             display: block;
+        }
+        
+        /* Add relative card specific styling */
+        #add-relative-card .section-header {
+            margin-top: 0;
         }
         
         @keyframes slideIn {
@@ -1251,7 +1384,7 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
+                height: 100%;
             background: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(4px);
             z-index: 10000;
@@ -1304,11 +1437,207 @@
             padding: 20px;
         }
         
-        /* Shortcuts modal */
-        .shortcuts-modal {
-            width: 400px;
+        /* Storage option styling */
+        .storage-option {
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .storage-option:hover {
+            background: var(--bg-card) !important;
+        }
+        .storage-option:has(input:checked) {
+            border-color: var(--primary) !important;
+            background: rgba(59, 130, 246, 0.08) !important;
         }
         
+        /* Help Modal */
+        .help-modal {
+            width: 600px;
+            max-width: 95vw;
+            max-height: 85vh;
+        }
+        
+        .help-modal .modal-body {
+            overflow-y: auto;
+            max-height: calc(85vh - 70px);
+            padding: 16px;
+        }
+        
+        .help-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        /* Help Sections - Collapsible */
+        .help-section {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            background: var(--bg-card);
+        }
+        
+        .help-section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 16px;
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--text-dark);
+            cursor: pointer;
+            background: var(--bg-light);
+            transition: background 0.2s;
+            list-style: none;
+        }
+        
+        .help-section-title::-webkit-details-marker {
+            display: none;
+        }
+        
+        .help-section-title::after {
+            content: '▶';
+            margin-left: auto;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+        
+        .help-section[open] .help-section-title::after {
+            transform: rotate(90deg);
+        }
+        
+        .help-section-title:hover {
+            background: var(--bg-hover);
+        }
+        
+        .help-icon {
+            font-size: 1.2rem;
+        }
+        
+        .help-section-content {
+            padding: 16px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .help-section-content h4 {
+            color: var(--text-dark);
+            font-size: 0.95rem;
+            margin: 16px 0 8px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .help-section-content h4:first-child {
+            margin-top: 0;
+        }
+        
+        .help-intro {
+            color: var(--text-dark);
+            margin-bottom: 12px;
+        }
+        
+        .help-steps {
+            counter-reset: step-counter;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .help-steps li {
+            position: relative;
+            padding: 12px 12px 12px 40px;
+            margin-bottom: 8px;
+            background: var(--bg-light);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .help-steps li::before {
+            counter-increment: step-counter;
+            content: counter(step-counter);
+            position: absolute;
+            left: 10px;
+            top: 12px;
+            width: 22px;
+            height: 22px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .help-steps li strong {
+            display: block;
+            color: var(--text-dark);
+            margin-bottom: 4px;
+        }
+        
+        .help-steps li p {
+            margin: 0;
+            color: var(--text-muted);
+        }
+        
+        .help-list {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0;
+        }
+        
+        .help-list li {
+            padding: 8px 0 8px 24px;
+            position: relative;
+        }
+        
+        .help-list li::before {
+            content: '•';
+            position: absolute;
+            left: 8px;
+            color: var(--primary);
+            font-weight: bold;
+        }
+        
+        .help-list li strong {
+            color: var(--text-dark);
+        }
+        
+        .help-substeps {
+            margin: 8px 0;
+            padding-left: 20px;
+            list-style-type: decimal;
+        }
+        
+        .help-substeps li {
+            padding: 4px 0;
+            color: var(--text-muted);
+        }
+        
+        .help-substeps li::before {
+            display: none;
+        }
+        
+        .help-tip {
+            margin: 12px 0 4px 0;
+            padding: 10px 12px;
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 3px solid var(--primary);
+            border-radius: 0 6px 6px 0;
+            font-size: 0.85rem;
+        }
+        
+        .tips-list li {
+            padding: 10px 12px 10px 24px;
+            background: var(--bg-light);
+            border-radius: 8px;
+            margin-bottom: 6px;
+        }
+        
+        /* Shortcuts within help */
         .shortcuts-list {
             display: flex;
             flex-direction: column;
@@ -1337,6 +1666,37 @@
         .shortcut-item span {
             color: var(--text-muted);
             font-size: 0.9rem;
+        }
+        
+        /* Help kbd inline */
+        .help-section-content kbd {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--text-dark);
+        }
+        
+        /* Mobile help modal */
+        @media (max-width: 768px) {
+            .help-modal {
+                width: 100%;
+                max-width: 100%;
+                height: 90vh;
+                max-height: 90vh;
+                border-radius: 16px 16px 0 0;
+            }
+            
+            .help-section-title {
+                padding: 12px 14px;
+                font-size: 0.95rem;
+            }
+            
+            .help-section-content {
+                padding: 12px;
+            }
         }
         
         /* Search styles */
@@ -1847,14 +2207,23 @@
 </head>
 <body>
 <script type="module">
-    import { startDraw, zoomIn, zoomOut, fitToScreen, relayoutNodes, setFocusPerson, setMaxGenerations, clearFilter, getAllIndividuals, setNodeClickCallback, expandFromPerson, updateAllNodesData, refreshStyles, searchPersons, centerOnSearchResult, clearSearch, downloadPng, downloadSvg, calculateStatistics, findDuplicates, toggleDragMode, isDragEnabled, calculateRelationship } from './js/diagram.js';
+    import { startDraw, zoomIn, zoomOut, fitToScreen, relayoutNodes, setFocusPerson, setMaxGenerations, clearFilter, getAllIndividuals, setNodeClickCallback, expandFromPerson, updateAllNodesData, refreshStyles, searchPersons, centerOnSearchResult, clearSearch, downloadPng, downloadSvg, calculateStatistics, findDuplicates, toggleDragMode, isDragEnabled, calculateRelationship, formatDisplayName, getShowNicknameSetting, setShowNicknameSetting } from './js/diagram.js';
     import { extractEvents, generateTimelineHTML } from './js/timeline.js';
     import { handleGedComFileSelect as importGedComFile, importGedComText } from './js/gedcom_import.js';
     import { importCSVFile, getExpectedColumns } from './js/csv_import.js';
     import { addNewNode, handleNodeValueChange, handleNodeValueWithNewNode, deleteNode, handleImgFileSelect } from './js/gedcom_edit.js';
     import { gedcomExport, createFileContent, exportToJSON } from './js/gedcom_export.js';
-    import { initShortcuts, registerAction, showShortcutsHelp } from './js/shortcuts.js';
-    import { saveSnapshot, undo, redo, canUndo, canRedo, addStateListener } from './js/state2.js';
+    import { initShortcuts, registerAction, showShortcutsHelp, showHelpModal } from './js/shortcuts.js';
+    import { initStateManager, saveSnapshot, undo, redo, canUndo, canRedo, addStateListener } from './js/undo_state.js';
+
+    // Initialize state manager with GEDCOM text functions
+    initStateManager(
+        () => createFileContent(),  // Get current GEDCOM text
+        (text) => importGedComText(text)  // Import GEDCOM text
+    );
+
+    // Expose updateAllNodesData to window for use by gedcom_edit.js
+    window.updateAllNodesData = updateAllNodesData;
 
     // Register service worker for PWA
     if ('serviceWorker' in navigator) {
@@ -1900,8 +2269,9 @@
     registerAction('undo', () => performUndo());
     registerAction('redo', () => performRedo());
     
-    // Expose shortcuts help
+    // Expose help modal
     window.showShortcutsHelp = showShortcutsHelp;
+    window.showHelpModal = showHelpModal;
     
     // Export image functions
     window.exportPng = () => downloadPng('family-tree-' + Date.now() + '.png', 2);
@@ -1955,7 +2325,7 @@
                 ${stats.oldestPerson ? `
                 <div class="stats-row">
                     <span>Oldest person:</span>
-                    <strong>${stats.oldestPerson.name.replace(/\//g, '')} (${stats.oldestPerson.age} years)</strong>
+                    <strong>${stats.oldestPerson.displayName || stats.oldestPerson.name.replace(/\//g, '')} (${stats.oldestPerson.age} years)</strong>
                 </div>` : ''}
             </div>
             
@@ -1964,7 +2334,7 @@
                 <h3>Families</h3>
                 <div class="stats-row">
                     <span>Most children:</span>
-                    <strong>${stats.mostChildren.family.replace(/\//g, '')} (${stats.mostChildren.count} children)</strong>
+                    <strong>${stats.mostChildren.family} (${stats.mostChildren.count} children)</strong>
                 </div>
             </div>` : ''}
             
@@ -2028,12 +2398,12 @@
                                 </div>
                                 <div class="duplicate-persons">
                                     <div class="duplicate-person" onclick="goToSearchResult('${d.person1.id}'); closeDuplicatesModal();">
-                                        <strong>${d.person1.name.replace(/\//g, '')}</strong>
+                                        <strong>${d.person1.displayName}</strong>
                                         ${d.person1.birth ? `<small>b. ${d.person1.birth}</small>` : ''}
                                     </div>
                                     <span class="duplicate-vs">vs</span>
                                     <div class="duplicate-person" onclick="goToSearchResult('${d.person2.id}'); closeDuplicatesModal();">
-                                        <strong>${d.person2.name.replace(/\//g, '')}</strong>
+                                        <strong>${d.person2.displayName}</strong>
                                         ${d.person2.birth ? `<small>b. ${d.person2.birth}</small>` : ''}
                                     </div>
                                 </div>
@@ -2073,10 +2443,10 @@
         const select1 = document.getElementById('relPerson1');
         const select2 = document.getElementById('relPerson2');
         
-        // Populate dropdowns
+        // Populate dropdowns with displayName (includes nickname if enabled)
         const individuals = getAllIndividuals();
         const options = individuals.map(p => 
-            `<option value="${p.id}">${p.name.replace(/\//g, '')}</option>`
+            `<option value="${p.id}">${p.displayName}</option>`
         ).join('');
         
         select1.innerHTML = '<option value="">Select person...</option>' + options;
@@ -2426,8 +2796,8 @@
             html += '<div class="rel-path">';
             result.path.forEach((step, i) => {
                 const person = getAllIndividuals().find(p => p.id === step.id);
-                const name = person ? person.name.replace(/\//g, '') : step.id;
-                html += `<span class="rel-step" onclick="goToSearchResult('${step.id}'); closeRelationshipModal();">${name}</span>`;
+                const displayName = person ? person.displayName : step.id;
+                html += `<span class="rel-step" onclick="goToSearchResult('${step.id}'); closeRelationshipModal();">${displayName}</span>`;
                 if (i < result.path.length - 1) {
                     html += `<span class="rel-arrow">→</span>`;
                 }
@@ -2493,115 +2863,6 @@
         }, 50);
     };
     
-    window.handleGedComFileSelect = async function(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        showLoading('Importing GEDCOM...');
-        
-        try {
-            await importGedComFile(event);
-            refreshDiagram();
-        } catch (err) {
-            hideLoading();
-            alert('Error importing GEDCOM: ' + err.message);
-        }
-    };
-    
-    window.handleCsvFileSelect = async function(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        showLoading('Importing CSV...');
-        
-        try {
-            const gedcomText = await importCSVFile(file);
-            importGedComText(gedcomText);
-            refreshDiagram();
-        } catch (err) {
-            hideLoading();
-            alert('Error importing CSV: ' + err.message);
-        }
-    };
-    
-    window.handleJsonFileSelect = async function(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        showLoading('Importing JSON...');
-        
-        try {
-            const text = await file.text();
-            const jsonData = JSON.parse(text);
-            
-            // Convert JSON to GEDCOM format
-            let gedcomText = '0 HEAD\n1 SOUR JSON Import\n1 GEDC\n2 VERS 5.5.1\n2 FORM LINEAGE-LINKED\n1 CHAR UTF-8\n';
-            
-            // Process individuals
-            if (jsonData.individuals && Array.isArray(jsonData.individuals)) {
-                jsonData.individuals.forEach(ind => {
-                    gedcomText += `0 ${ind.id} INDI\n`;
-                    if (ind.name) gedcomText += `1 NAME ${ind.name}\n`;
-                    if (ind.givenName) gedcomText += `2 GIVN ${ind.givenName}\n`;
-                    if (ind.surname) gedcomText += `2 SURN ${ind.surname}\n`;
-                    if (ind.sex) gedcomText += `1 SEX ${ind.sex}\n`;
-                    if (ind.birth) {
-                        gedcomText += `1 BIRT\n`;
-                        if (ind.birth.date) gedcomText += `2 DATE ${ind.birth.date}\n`;
-                        if (ind.birth.place) gedcomText += `2 PLAC ${ind.birth.place}\n`;
-                    }
-                    if (ind.death) {
-                        gedcomText += `1 DEAT\n`;
-                        if (ind.death.date) gedcomText += `2 DATE ${ind.death.date}\n`;
-                        if (ind.death.place) gedcomText += `2 PLAC ${ind.death.place}\n`;
-                    }
-                    if (ind.familyAsSpouse) {
-                        ind.familyAsSpouse.forEach(fid => {
-                            gedcomText += `1 FAMS ${fid}\n`;
-                        });
-                    }
-                    if (ind.familyAsChild) {
-                        ind.familyAsChild.forEach(fid => {
-                            gedcomText += `1 FAMC ${fid}\n`;
-                        });
-                    }
-                    if (ind.image) gedcomText += `1 IMG ${ind.image}\n`;
-                });
-            }
-            
-            // Process families
-            if (jsonData.families && Array.isArray(jsonData.families)) {
-                jsonData.families.forEach(fam => {
-                    gedcomText += `0 ${fam.id} FAM\n`;
-                    if (fam.husband) {
-                        const husbands = Array.isArray(fam.husband) ? fam.husband : [fam.husband];
-                        husbands.forEach(h => gedcomText += `1 HUSB ${h}\n`);
-                    }
-                    if (fam.wife) {
-                        const wives = Array.isArray(fam.wife) ? fam.wife : [fam.wife];
-                        wives.forEach(w => gedcomText += `1 WIFE ${w}\n`);
-                    }
-                    if (fam.children) {
-                        fam.children.forEach(c => gedcomText += `1 CHIL ${c}\n`);
-                    }
-                    if (fam.marriage) {
-                        gedcomText += `1 MARR\n`;
-                        if (fam.marriage.date) gedcomText += `2 DATE ${fam.marriage.date}\n`;
-                        if (fam.marriage.place) gedcomText += `2 PLAC ${fam.marriage.place}\n`;
-                    }
-                });
-            }
-            
-            gedcomText += '0 TRLR\n';
-            
-            importGedComText(gedcomText);
-            refreshDiagram();
-        } catch (err) {
-            hideLoading();
-            alert('Error importing JSON: ' + err.message);
-        }
-    };
-    
     window.showCSVImportHelp = function() {
         const columns = getExpectedColumns();
         alert('CSV Import Format\\n\\nExpected columns:\\n' + 
@@ -2613,6 +2874,12 @@
         saveSnapshot('Add ' + typeOfNewNode);
         addNewNode(typeOfNewNode);
         refreshDiagram();
+        
+        // Clear the input fields after adding a relative
+        const nameInput = document.getElementById('newNodeNameValue');
+        if (nameInput) nameInput.value = '';
+        const genderRadios = document.querySelectorAll('input[name="newNodeGender"]');
+        genderRadios.forEach(radio => radio.checked = false);
     };
     
     window.handleNodeValueChange = function (key, event, familyRowCacheIndex) {
@@ -2639,10 +2906,34 @@
         refreshDiagram();
     };
     
+    // Wrap updatePersonField to add undo support for field edits
+    const _originalUpdatePersonField = window.updatePersonField;
+    window.updatePersonField = function(input, tag, valueSuffix) {
+        saveSnapshot('Edit ' + tag);
+        _originalUpdatePersonField(input, tag, valueSuffix);
+        updateAllNodesData();
+    };
+    
+    // Wrap updateNestedField to add undo support for nested field edits (birth/death dates, places)
+    const _originalUpdateNestedField = window.updateNestedField;
+    window.updateNestedField = function(input, parentTag, childTag, isDateField) {
+        saveSnapshot('Edit ' + parentTag + ' ' + childTag);
+        _originalUpdateNestedField(input, parentTag, childTag, isDateField);
+        updateAllNodesData();
+    };
+    
+    // Wrap updateFamilyNestedField to add undo support for family field edits (marriage date/place)
+    const _originalUpdateFamilyNestedField = window.updateFamilyNestedField;
+    window.updateFamilyNestedField = function(input, parentTag, childTag) {
+        saveSnapshot('Edit Family ' + parentTag + ' ' + childTag);
+        _originalUpdateFamilyNestedField(input, parentTag, childTag);
+        updateAllNodesData();
+    };
+    
     window.exportFileNow = function () {
         showLoading('Exporting file...');
         setTimeout(() => {
-            gedcomExport();
+        gedcomExport();
             hideLoading();
         }, 50);
     };
@@ -2735,6 +3026,7 @@
         setTimeout(() => {
             clearFilter();
             document.getElementById('focusPerson').value = '';
+            document.getElementById('focusPersonSearch').value = '';
             document.getElementById('genCount').value = '3';
             startDraw();
             updatePersonSelector();
@@ -2826,7 +3118,7 @@
         container.style.display = 'block';
         container.innerHTML = results.slice(0, 10).map(r => `
             <div class="search-result-item" onclick="goToSearchResult('${r.id}')">
-                <span class="search-result-name">${r.name.replace(/\//g, '')}</span>
+                <span class="search-result-name">${r.displayName}</span>
                 <span class="search-result-id">${r.id}</span>
             </div>
         `).join('') + (results.length > 10 ? `<div class="search-more">+${results.length - 10} more results</div>` : '');
@@ -2840,27 +3132,108 @@
     // Expose centerOnSearchResult for use by family member navigation
     window.centerOnSearchResult = centerOnSearchResult;
     
+    // ========== SEARCHABLE PERSON SELECTOR ==========
+    let allPersonsList = [];
+    
     function updatePersonSelector() {
-        const select = document.getElementById('focusPerson');
-        const individuals = getAllIndividuals();
-        
-        // Keep current selection if possible
-        const currentValue = select.value;
-        
-        // Clear and rebuild options
-        select.innerHTML = '<option value="">-- Show All --</option>';
-        individuals.forEach(person => {
-            const option = document.createElement('option');
-            option.value = person.id;
-            option.textContent = person.name.replace(/\//g, '');
-            select.appendChild(option);
-        });
-        
-        // Restore selection
-        if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
-            select.value = currentValue;
-        }
+        allPersonsList = getAllIndividuals();
+        // Show initial list
+        renderPersonList(allPersonsList.slice(0, 10), allPersonsList.length > 10);
     }
+    
+    function renderPersonList(persons, hasMore = false, showAll = false) {
+        const list = document.getElementById('focusPersonList');
+        if (!list) return;
+        
+        let html = '';
+        
+        // Show All option at top
+        html += `<div class="searchable-select-item" onclick="selectPerson('', '')">
+            <span class="item-name">📋 Show All (no filter)</span>
+        </div>`;
+        
+        if (persons.length === 0) {
+            html += `<div class="searchable-select-empty">No persons found</div>`;
+        } else {
+            persons.forEach(person => {
+                // Use displayName which includes nickname if setting is enabled
+                const displayName = person.displayName || person.name.replace(/\//g, '');
+                html += `<div class="searchable-select-item" onclick="selectPerson('${person.id}', '${displayName.replace(/'/g, "\\'")}')">
+                    <span class="item-name">${displayName}</span>
+                    <span class="item-id">${person.id}</span>
+                </div>`;
+            });
+            
+            if (hasMore && !showAll) {
+                html += `<div class="searchable-select-show-all" onclick="event.stopPropagation(); showAllPersons();">
+                    Show all ${allPersonsList.length} persons...
+                </div>`;
+            }
+        }
+        
+        list.innerHTML = html;
+    }
+    
+    window.showPersonList = function() {
+        const list = document.getElementById('focusPersonList');
+        if (list) {
+            list.classList.add('open');
+            // Show first 10 persons initially
+            renderPersonList(allPersonsList.slice(0, 10), allPersonsList.length > 10);
+        }
+    };
+    
+    window.hidePersonList = function() {
+        const list = document.getElementById('focusPersonList');
+        if (list) {
+            // Delay hiding to allow click events to fire
+            setTimeout(() => list.classList.remove('open'), 150);
+        }
+    };
+    
+    window.filterPersonList = function(query) {
+        const list = document.getElementById('focusPersonList');
+        if (!list) return;
+        
+        list.classList.add('open');
+        
+        if (!query || query.trim() === '') {
+            renderPersonList(allPersonsList.slice(0, 10), allPersonsList.length > 10);
+            return;
+        }
+        
+        const lowerQuery = query.toLowerCase();
+        const filtered = allPersonsList.filter(p => 
+            p.name.toLowerCase().includes(lowerQuery) || 
+            p.id.toLowerCase().includes(lowerQuery) ||
+            (p.nickname && p.nickname.toLowerCase().includes(lowerQuery))
+        );
+        
+        renderPersonList(filtered.slice(0, 20), filtered.length > 20);
+    };
+    
+    window.showAllPersons = function() {
+        renderPersonList(allPersonsList, false, true);
+    };
+    
+    window.selectPerson = function(id, name) {
+        const hiddenInput = document.getElementById('focusPerson');
+        const searchInput = document.getElementById('focusPersonSearch');
+        const list = document.getElementById('focusPersonList');
+        
+        if (hiddenInput) hiddenInput.value = id;
+        if (searchInput) searchInput.value = id ? name : '';
+        if (list) list.classList.remove('open');
+    };
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const container = document.getElementById('focusPersonContainer');
+        const list = document.getElementById('focusPersonList');
+        if (container && list && !container.contains(e.target)) {
+            list.classList.remove('open');
+        }
+    });
 
     // ========== STORAGE MODE & AUTO-SAVE FUNCTIONALITY ==========
     
@@ -2877,9 +3250,10 @@
     let pendingImportFile = null; // Store file while showing import modal
     
     // Check if data has changed since last export
+    // Returns the hasUnsavedChanges flag which is set by edit operations
     function checkUnsavedChanges() {
-        const currentContent = createFileContent();
-        hasUnsavedChanges = currentContent && currentContent !== lastExportedContent && currentContent.length > 100;
+        // Only return true if user has actually made edits (via triggerAutoSave)
+        // This avoids false positives from GEDCOM serialization differences
         return hasUnsavedChanges;
     }
     
@@ -2963,6 +3337,21 @@
     
     // Show import options modal
     window.showImportOptionsModal = function(file) {
+        // Check if there are unsaved changes BEFORE importing
+        if (checkUnsavedChanges()) {
+            // Store the file temporarily and show warning modal
+            pendingImportFile = file;
+            const modal = document.getElementById('unsaved-before-import-modal');
+            modal.classList.add('active');
+            return; // Don't proceed to import options yet
+        }
+        
+        // No unsaved changes, proceed directly to import options
+        proceedToImportOptions(file);
+    };
+    
+    // Actually show the import options modal (called after unsaved check passes)
+    function proceedToImportOptions(file) {
         pendingImportFile = file;
         const modal = document.getElementById('import-options-modal');
         
@@ -2971,12 +3360,53 @@
         document.querySelector(`input[name="importStorageMode"][value="${currentMode}"]`).checked = true;
         
         modal.classList.add('active');
-    };
+    }
     
     window.closeImportOptionsModal = function() {
         const modal = document.getElementById('import-options-modal');
         modal.classList.remove('active');
         pendingImportFile = null;
+    };
+    
+    // Unsaved before import modal handlers
+    window.closeUnsavedBeforeImportModal = function() {
+        const modal = document.getElementById('unsaved-before-import-modal');
+        modal.classList.remove('active');
+        pendingImportFile = null;
+    };
+    
+    window.exportFirstThenImport = function() {
+        // Close the warning modal
+        const warningModal = document.getElementById('unsaved-before-import-modal');
+        warningModal.classList.remove('active');
+        
+        // Export GEDCOM first
+        showLoading('Exporting current tree...');
+        setTimeout(() => {
+            gedcomExport();
+            markAsExported();
+            hideLoading();
+            
+            // Now proceed to import options
+            if (pendingImportFile) {
+                proceedToImportOptions(pendingImportFile);
+            }
+        }, 100);
+    };
+    
+    window.discardAndImport = function() {
+        // Close the warning modal
+        const warningModal = document.getElementById('unsaved-before-import-modal');
+        warningModal.classList.remove('active');
+        
+        // Mark as no unsaved changes (user chose to discard)
+        hasUnsavedChanges = false;
+        lastExportedContent = ''; // Reset so new import becomes the baseline
+        
+        // Proceed to import options
+        if (pendingImportFile) {
+            proceedToImportOptions(pendingImportFile);
+        }
     };
     
     window.proceedWithImport = async function() {
@@ -3197,6 +3627,13 @@
         const modal = document.getElementById('storage-settings-modal');
         const currentMode = storageMode === 'none' ? 'auto' : storageMode;
         document.querySelector(`input[name="storageSettingsMode"][value="${currentMode}"]`).checked = true;
+        
+        // Initialize nickname toggle (default is true/checked)
+        const nicknameToggle = document.getElementById('showNicknameToggle');
+        if (nicknameToggle) {
+            nicknameToggle.checked = getShowNicknameSetting();
+        }
+        
         modal.classList.add('active');
     };
     
@@ -3210,6 +3647,12 @@
         storageMode = selectedMode;
         localStorage.setItem('storageMode', selectedMode);
         
+        // Save nickname display setting
+        const nicknameToggle = document.getElementById('showNicknameToggle');
+        if (nicknameToggle) {
+            setShowNicknameSetting(nicknameToggle.checked);
+        }
+        
         // If switching away from auto, clear localStorage data
         if (selectedMode !== 'auto') {
             localStorage.removeItem('DataTillNow');
@@ -3219,7 +3662,11 @@
         }
         
         closeStorageSettings();
-        alert(`✅ Storage mode changed to: ${getStorageModeLabel(selectedMode)}`);
+        
+        // Refresh person lists to reflect nickname setting change
+        updatePersonSelector();
+        
+        alert(`✅ Settings saved!`);
     };
     
     function getStorageModeLabel(mode) {
@@ -3233,8 +3680,11 @@
     // ========== END STORAGE MODE & AUTO-SAVE FUNCTIONALITY ==========
 
     window.addEventListener('load', function () {
-        // Only load from localStorage if in auto mode
-        if (storageMode === 'auto') {
+        // First-time visitor - show storage settings
+        if (storageMode === 'none') {
+            showFirstTimeStorageModal();
+        } else if (storageMode === 'auto') {
+            // Only load from localStorage if in auto mode
             const storedData = localStorage.getItem('DataTillNow');
             if (storedData) {
                 importGedComText(storedData);
@@ -3243,7 +3693,58 @@
             }
         }
         refreshDiagram();
+        
+        // After initial load, set the current state as the baseline
+        // This prevents "unsaved changes" for the default/initial diagram
+        setTimeout(() => {
+            if (!lastExportedContent) {
+                lastExportedContent = createFileContent();
+            }
+            hasUnsavedChanges = false;
+        }, 200);
     });
+    
+    // First-time storage selection modal
+    window.showFirstTimeStorageModal = function() {
+        const modal = document.getElementById('first-time-storage-modal');
+        if (modal) {
+            modal.classList.add('active');
+        } else {
+            // Fallback to regular storage settings if first-time modal doesn't exist
+            showStorageSettings();
+        }
+    };
+    
+    window.closeFirstTimeStorageModal = function() {
+        const modal = document.getElementById('first-time-storage-modal');
+        if (modal) modal.classList.remove('active');
+    };
+    
+    window.saveFirstTimeStorageSettings = function() {
+        const selectedMode = document.querySelector('input[name="firstTimeStorageMode"]:checked').value;
+        storageMode = selectedMode;
+        localStorage.setItem('storageMode', selectedMode);
+        closeFirstTimeStorageModal();
+        
+        // If auto mode and there was previous data, load it
+        if (selectedMode === 'auto') {
+            const storedData = localStorage.getItem('DataTillNow');
+            if (storedData) {
+                importGedComText(storedData);
+                lastSavedContent = storedData;
+                lastExportedContent = storedData;
+                refreshDiagram();
+            }
+        }
+        
+        // Set current state as baseline (no unsaved changes after initial setup)
+        setTimeout(() => {
+            if (!lastExportedContent) {
+                lastExportedContent = createFileContent();
+            }
+            hasUnsavedChanges = false;
+        }, 200);
+    };
 
     window.addEventListener('beforeunload', function (event) {
         // Final save if in auto mode
@@ -3251,13 +3752,24 @@
             saveToLocalStorage();
         }
         
-        // Show warning if there are unsaved changes in session/export-only modes
-        if ((storageMode === 'session' || storageMode === 'export-only') && checkUnsavedChanges()) {
-            const message = '⚠️ You have unsaved changes! Export your data before leaving to avoid losing it.';
-            event.preventDefault();
-            event.returnValue = message;
-            return message;
+        // Only show warning if there are ACTUAL unsaved changes
+        if (!checkUnsavedChanges()) {
+            return; // No changes, no warning needed
         }
+        
+        // For auto mode, check if save was successful
+        if (storageMode === 'auto') {
+            const currentContent = createFileContent();
+            if (currentContent === lastSavedContent) {
+                return; // Auto-saved successfully, no warning needed
+            }
+        }
+        
+        // Show warning for session/export-only modes, or auto mode with failed save
+        const message = '⚠️ You have unsaved changes! Export your data before leaving to avoid losing it.';
+        event.preventDefault();
+        event.returnValue = message;
+        return message;
     });
 </script>
 
@@ -3463,7 +3975,7 @@
     </div>
 </div>
 
-<!-- Unsaved Changes Warning Modal -->
+<!-- Unsaved Changes Warning Modal (for page leave) -->
 <div id="unsaved-changes-modal" class="modal-overlay">
     <div class="modal-content" style="width: 400px; max-width: 95%;">
         <div class="modal-header">
@@ -3492,15 +4004,62 @@
     </div>
 </div>
 
+<!-- Unsaved Changes Before Import Modal -->
+<div id="unsaved-before-import-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 420px; max-width: 95%;">
+        <div class="modal-header">
+            <h2>⚠️ Unsaved Changes</h2>
+            <button class="modal-close" onclick="closeUnsavedBeforeImportModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text-dark); margin-bottom: 12px; font-size: 1rem;">
+                You have unsaved changes in your current family tree!
+            </p>
+            <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">
+                Importing a new file will <strong>replace</strong> your current data. What would you like to do?
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn-primary" onclick="exportFirstThenImport()" style="padding: 14px;">
+                    📄 Export First (GEDCOM)
+                    <small style="display: block; font-weight: normal; opacity: 0.8; margin-top: 2px;">Save current tree, then import new file</small>
+                </button>
+                <button class="btn-danger" onclick="discardAndImport()" style="padding: 14px;">
+                    🗑️ Discard & Import
+                    <small style="display: block; font-weight: normal; opacity: 0.8; margin-top: 2px;">Lose current changes, proceed with import</small>
+                </button>
+                <button class="btn-outline" onclick="closeUnsavedBeforeImportModal()" style="padding: 12px;">
+                    ← Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Storage Settings Modal -->
 <div id="storage-settings-modal" class="modal-overlay">
     <div class="modal-content" style="width: 420px; max-width: 95%;">
         <div class="modal-header">
-            <h2>🔐 Data Storage Settings</h2>
+            <h2>⚙️ Settings</h2>
             <button class="modal-close" onclick="closeStorageSettings()">&times;</button>
         </div>
         <div class="modal-body">
-            <p style="color: var(--text-muted); margin-bottom: 16px;">
+            <!-- Display Settings -->
+            <div style="margin-bottom: 20px;">
+                <h3 style="font-size: 0.9rem; color: var(--text-dark); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">👁️ Display Options</h3>
+                <label style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-light); border-radius: 8px; cursor: pointer;">
+                    <input type="checkbox" id="showNicknameToggle" style="width: 20px; height: 20px; accent-color: var(--primary);">
+                    <div>
+                        <strong style="display: block; color: var(--text-dark);">Show nicknames with names</strong>
+                        <small style="color: var(--text-muted);">Display nicknames in dropdowns and search (e.g., "John Smith \\"Johnny\\")"</small>
+                    </div>
+                </label>
+            </div>
+            
+            <hr style="margin: 16px 0;">
+            
+            <!-- Storage Settings -->
+            <h3 style="font-size: 0.9rem; color: var(--text-dark); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">🔐 Data Storage</h3>
+            <p style="color: var(--text-muted); margin-bottom: 12px; font-size: 0.85rem;">
                 Choose how your family tree data is stored:
             </p>
             
@@ -3530,7 +4089,7 @@
                 </label>
             </div>
             
-            <div style="margin-top: 20px; padding: 12px; background: var(--warning); background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid var(--warning);">
+            <div style="margin-top: 16px; padding: 12px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid var(--warning);">
                 <p style="color: var(--text-dark); font-size: 0.85rem; margin: 0;">
                     ⚠️ <strong>Privacy Note:</strong> Data stored in your browser can be accessed by anyone with physical access to this device.
                 </p>
@@ -3550,6 +4109,60 @@
     </div>
 </div>
 
+<!-- First-Time Storage Selection Modal -->
+<div id="first-time-storage-modal" class="modal-overlay">
+    <div class="modal-content" style="width: 450px; max-width: 95%;">
+        <div class="modal-header">
+            <h2>🌳 Welcome to Family Tree Editor!</h2>
+        </div>
+        <div class="modal-body">
+            <p style="color: var(--text-dark); margin-bottom: 16px; font-size: 1rem;">
+                Before you start, please choose how your family tree data should be stored:
+            </p>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <label class="storage-option" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px; background: var(--bg-light); border-radius: 10px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s;">
+                    <input type="radio" name="firstTimeStorageMode" value="auto" checked style="margin-top: 3px; width: 18px; height: 18px;">
+                    <div>
+                        <strong style="display: block; color: var(--text-dark); font-size: 1rem;">💾 Auto-save to browser</strong>
+                        <small style="color: var(--text-muted); font-size: 0.9rem;">Your data stays saved even after closing the browser. Most convenient for personal use.</small>
+                    </div>
+                </label>
+                
+                <label class="storage-option" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px; background: var(--bg-light); border-radius: 10px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s;">
+                    <input type="radio" name="firstTimeStorageMode" value="session" style="margin-top: 3px; width: 18px; height: 18px;">
+                    <div>
+                        <strong style="display: block; color: var(--text-dark); font-size: 1rem;">🔒 Session only</strong>
+                        <small style="color: var(--text-muted); font-size: 0.9rem;">Data is cleared when you close the browser. Better for shared/public computers.</small>
+                    </div>
+                </label>
+                
+                <label class="storage-option" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px; background: var(--bg-light); border-radius: 10px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s;">
+                    <input type="radio" name="firstTimeStorageMode" value="export-only" style="margin-top: 3px; width: 18px; height: 18px;">
+                    <div>
+                        <strong style="display: block; color: var(--text-dark); font-size: 1rem;">📤 Export only (most secure)</strong>
+                        <small style="color: var(--text-muted); font-size: 0.9rem;">Nothing is saved automatically. You must export your data manually to save it.</small>
+                    </div>
+                </label>
+            </div>
+            
+            <div style="margin-top: 16px; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid var(--primary);">
+                <p style="color: var(--text-dark); font-size: 0.85rem; margin: 0;">
+                    💡 <strong>Tip:</strong> You can change this setting anytime from the ⚙️ Storage Settings in the sidebar.
+                </p>
+            </div>
+            
+            <button class="btn-primary" onclick="saveFirstTimeStorageSettings()" style="width: 100%; margin-top: 20px; padding: 14px; font-size: 1rem;">
+                ✓ Continue
+            </button>
+            
+            <p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; margin-top: 12px;">
+                🔒 Your data never leaves your device. Everything is processed locally.
+            </p>
+        </div>
+    </div>
+</div>
+
 <!-- Mobile menu button (bottom sheet trigger) -->
 <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Open menu">
     <span style="font-size: 1.3rem;">⚙️</span>
@@ -3559,7 +4172,7 @@
 <div id="sidebar-backdrop" onclick="closeMobileMenu()"></div>
 
 <div id="graph-container" style="position: relative; flex-grow: 2;">
-    <div id="cy"></div>
+<div id="cy"></div>
     
     <!-- Floating Graph Controls -->
     <div class="graph-controls">
@@ -3584,11 +4197,12 @@
 <div id="left">
     <div class="header">
         <h1>🌳 Family Tree</h1>
-        <div class="header-actions">
-            <button class="btn-icon" onclick="showShortcutsHelp()" title="Keyboard shortcuts (?)" id="shortcutsBtn">⌨️</button>
+<div class="header-actions">
+            <button class="btn-icon" onclick="window.open('https://forms.gle/PQntwjJDiUc6Q7mG8', '_blank')" title="Send Feedback">💬</button>
+            <button class="btn-icon" onclick="showHelpModal()" title="Help & Documentation (?)" id="helpBtn">❓</button>
             <button class="btn-icon" onclick="toggleDarkMode()" title="Toggle dark mode (D)" id="darkModeBtn">🌙</button>
             <button class="sidebar-close-btn" onclick="closeMobileMenu()" title="Close menu">✕</button>
-        </div>
+    </div>
     </div>
     
     <!-- Search Section - Always visible -->
@@ -3640,9 +4254,12 @@
     <div class="sidebar-section">
         <div class="section-header"><span>📍 Filter & Navigate</span></div>
         <div class="filter-row">
-            <select id="focusPerson" title="Focus on Person">
-                <option value="">-- Show All --</option>
-            </select>
+            <div class="searchable-select" id="focusPersonContainer">
+                <input type="text" id="focusPersonSearch" placeholder="Search person..." 
+                       autocomplete="off" onfocus="showPersonList()" oninput="filterPersonList(this.value)">
+                <input type="hidden" id="focusPerson" value="">
+                <div class="searchable-select-list" id="focusPersonList"></div>
+            </div>
             <input type="number" id="genCount" value="3" min="1" max="99" title="Generations" class="gen-input">
             <button class="btn-primary btn-sm" onclick="applyFilter()" title="Apply Filter">✓</button>
             <button class="btn-outline btn-sm" onclick="resetFilter()" title="Reset Filter">↺</button>
@@ -3657,15 +4274,38 @@
     </div>
     
     <!-- Selected Person Section - Hidden by default, shown on node click -->
-    <div class="card" id="selected-person-card">
+    <div id="selected-person-card">
         <div id="selected_data">
             <p class="placeholder-text">Click on a person in the tree to view and edit their details</p>
         </div>
         <div id="selected_options" style="display:none;"></div>
     </div>
     
+    <!-- Add New Relative Section - Hidden by default, shown when person is selected -->
+    <div id="add-relative-card">
+        <div class="section-header" style="margin-bottom:12px;"><span>➕ Add New Relative</span></div>
+        <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="newNodeNameValue" placeholder="Enter full name" autocomplete="off">
+        </div>
+        <div class="form-group">
+            <label>Gender <span style="color:var(--danger);">*</span></label>
+            <div class="radio-group">
+                <label><input type="radio" name="newNodeGender" value="M"> 👨 Male</label>
+                <label><input type="radio" name="newNodeGender" value="F"> 👩 Female</label>
+                <label><input type="radio" name="newNodeGender" value="O"> 🧑 Other</label>
+            </div>
+        </div>
+        <div class="btn-group" style="margin-top:12px; flex-wrap:wrap;">
+            <button class="btn-secondary btn-sm" onclick="addNewNode('partner')">💑 Spouse</button>
+            <button class="btn-secondary btn-sm" onclick="addNewNode('child_from_parent')">👶 Child</button>
+            <button class="btn-secondary btn-sm" onclick="addNewNode('parent')">👨‍👩‍👦 Parents</button>
+            <button class="btn-secondary btn-sm" onclick="addNewNode('sibling')">👫 Sibling</button>
+        </div>
+    </div>
+    
     <!-- More Tools Section - Collapsible -->
-    <details class="collapsible-section">
+    <details class="collapsible-section" open>
         <summary><span>🛠️ More Tools</span></summary>
         <div class="details-content">
             <div class="compact-btn-grid">
@@ -3690,8 +4330,11 @@
                 <button class="btn-outline btn-sm" onclick="showRelationshipCalc()" title="Calculate relationship">
                     <span>🔗</span> Relationship
                 </button>
-                <button class="btn-outline btn-sm" onclick="showStorageSettings()" title="Data storage settings">
-                    <span>🔐</span> Storage
+                <button class="btn-outline btn-sm" onclick="showStorageSettings()" title="Display & Storage settings">
+                    <span>⚙️</span> Settings
+                </button>
+                <button class="btn-outline btn-sm" onclick="window.open('https://forms.gle/PQntwjJDiUc6Q7mG8', '_blank')" title="Send feedback">
+                    <span>💬</span> Feedback
                 </button>
                 <button class="btn-outline btn-sm" onclick="alert('Features:\n\n• No data sent to server - works offline\n• Data stored locally in browser\n• Photos embedded in export file\n• Universal GEDCOM format export')" title="About">
                     <span>ℹ️</span> About

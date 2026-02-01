@@ -1,4 +1,8 @@
-//
+/**
+ * GEDCOM Family Tree Editor
+ * Copyright (c) 2024-2026 amalamalpm
+ * Licensed under MIT License - see LICENSE.txt
+ */
 
 function handleGedComFileSelect(event) {
     const file = event.target.files[0];

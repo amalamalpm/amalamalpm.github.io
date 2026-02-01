@@ -1,3 +1,9 @@
+/**
+ * GEDCOM Family Tree Editor
+ * Copyright (c) 2024-2026 amalamalpm
+ * Licensed under MIT License - see LICENSE.txt
+ */
+
 import display from './gedcom.js';
 const debugTrace = false; // SECURITY: Disabled for production
 function exportToFile(content, fileName) {

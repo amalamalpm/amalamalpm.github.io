@@ -1,6 +1,9 @@
 /**
- * Security Utilities for GEDCOM Family Tree Editor
- * Provides XSS prevention and input validation
+ * GEDCOM Family Tree Editor
+ * Copyright (c) 2024-2026 amalamalpm
+ * Licensed under MIT License - see LICENSE.txt
+ * 
+ * Security Utilities - XSS prevention and input validation
  */
 
 /**

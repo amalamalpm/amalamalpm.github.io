@@ -1,4 +1,9 @@
-// require cytoscape
+/**
+ * GEDCOM Family Tree Editor
+ * Copyright (c) 2024-2026 amalamalpm
+ * Licensed under MIT License - see LICENSE.txt
+ */
+
 import cytoscape from "./cytoscape.esm.mjs";
 import display from './gedcom.js';
 import {displayFileContent} from "./gedcom_edit.js";
@@ -172,12 +177,12 @@ function addEdges(row, gedcomData) {
     }
     husbands.forEach((husband) => {
       if (husband && husband.id && isNodeVisible(husband.id, gedcomData) && isNodeVisible(row.id, gedcomData)) {
-        elements.push({
-          group: 'edges',
+      elements.push({
+        group: 'edges',
           classes: ['edges_v', 'edge_husb'],
-          data: {
-            id: "edge_" + row.id + "_" + husband.id, source: husband.id, target: row.id, label: 'H'}
-        });
+        data: {
+          id: "edge_" + row.id + "_" + husband.id, source: husband.id, target: row.id, label: 'H'}
+      });
       }
     })
   }
@@ -188,11 +193,11 @@ function addEdges(row, gedcomData) {
     }
     wives.forEach((wife) => {
       if (wife && wife.id && isNodeVisible(wife.id, gedcomData) && isNodeVisible(row.id, gedcomData)) {
-        elements.push({
-          group: 'edges',
+      elements.push({
+        group: 'edges',
           classes: ['edges_v', 'edge_wife'],
           data: {id: "edge_" + row.id + "_" + wife.id, source: wife.id, target: row.id, label: 'W'}
-        });
+      });
       }
     })
   }
@@ -203,11 +208,11 @@ function addEdges(row, gedcomData) {
     }
     children.forEach((child) => {
       if (child && child.id && isNodeVisible(child.id, gedcomData) && isNodeVisible(row.id, gedcomData)) {
-        elements.push({
-          group: 'edges',
+      elements.push({
+        group: 'edges',
           classes: ['edges_h', 'edge_child'],
-          data: {id: "edge_" + row.id + "_" + child.id, source: child.id, target: row.id, label: 'C'}
-        });
+        data: {id: "edge_" + row.id + "_" + child.id, source: child.id, target: row.id, label: 'C'}
+      });
       }
     });
   }
@@ -365,16 +370,22 @@ function startDraw() {
           'shape': 'round-rectangle'
         }
       },
-      // Family nodes - invisible connection points
+      // Family nodes - small subtle diamond for marriage/family connection
       {
         selector: 'node.family',
         style: {
-          'width': 1,
-          'height': 1,
-          'background-color': 'transparent',
-          'border-width': 0,
-          'label': '',
-          'opacity': 0
+          'width': 12,
+          'height': 12,
+          'shape': 'diamond',
+          'background-color': function() {
+            return document.documentElement.getAttribute('data-theme') === 'dark' ? '#475569' : '#cbd5e1';
+          },
+          'border-width': 1,
+          'border-color': function() {
+            return document.documentElement.getAttribute('data-theme') === 'dark' ? '#64748b' : '#94a3b8';
+          },
+          'opacity': 0.7,
+          'label': ''
         }
       },
       // Selected node highlight
@@ -519,12 +530,13 @@ function startDraw() {
     // Update the "Focus on Person" dropdown to this person for easy filtering
     if (familyRow && familyRow.tag === 'INDI' && familyRow.id) {
       const focusSelect = document.getElementById('focusPerson');
+      const focusSearch = document.getElementById('focusPersonSearch');
       if (focusSelect) {
-        // Check if this person exists in the dropdown
-        const option = focusSelect.querySelector(`option[value="${familyRow.id}"]`);
-        if (option) {
-          focusSelect.value = familyRow.id;
-        }
+        focusSelect.value = familyRow.id;
+      }
+      if (focusSearch) {
+        const name = extractLabel(familyRow) || familyRow.id;
+        focusSearch.value = name;
       }
     }
 
@@ -992,12 +1004,36 @@ function getAllIndividuals() {
   
   const individuals = [];
   gedcomData.indviduals.forEach((person, id) => {
+    const fullName = extractLabel(person);
+    const nickname = person._NICK?.value || '';
     individuals.push({
       id: id,
-      name: extractLabel(person)
+      name: fullName,
+      nickname: nickname,
+      displayName: formatDisplayName(fullName, nickname)
     });
   });
-  return individuals.sort((a, b) => a.name.localeCompare(b.name));
+  return individuals.sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
+
+// Format name with nickname based on user preference
+function formatDisplayName(fullName, nickname) {
+  const showNickname = localStorage.getItem('showNicknameInDisplay') !== 'false'; // Default true
+  if (showNickname && nickname && nickname.trim()) {
+    const cleanName = fullName.replace(/\//g, '');
+    return `${cleanName} "${nickname}"`;
+  }
+  return fullName.replace(/\//g, '');
+}
+
+// Get the show nickname setting
+function getShowNicknameSetting() {
+  return localStorage.getItem('showNicknameInDisplay') !== 'false';
+}
+
+// Set the show nickname setting
+function setShowNicknameSetting(value) {
+  localStorage.setItem('showNicknameInDisplay', value ? 'true' : 'false');
 }
 
 // Update a node's display data without full redraw (preserves expanded nodes)
@@ -1084,6 +1120,13 @@ function searchPersons(query) {
       }
     }
     
+    // Search in nickname
+    if (familyRow._NICK && familyRow._NICK.value) {
+      if (familyRow._NICK.value.toLowerCase().includes(searchTerm)) {
+        matches = true;
+      }
+    }
+    
     // Search in birth date/place
     if (familyRow.BIRT) {
       if (familyRow.BIRT.DATE && familyRow.BIRT.DATE.value && 
@@ -1115,9 +1158,13 @@ function searchPersons(query) {
     
     if (matches) {
       node.addClass('search-match');
+      const fullName = extractLabel(familyRow);
+      const nickname = familyRow._NICK?.value || '';
       results.push({
         id: node.id(),
-        name: extractLabel(familyRow),
+        name: fullName,
+        nickname: nickname,
+        displayName: formatDisplayName(fullName, nickname),
         node: node
       });
     }
@@ -1261,8 +1308,11 @@ function calculateStatistics() {
           if (lifespan > 0 && lifespan < 120) {
             lifespans.push(lifespan);
             if (!stats.oldestPerson || lifespan > stats.oldestPerson.age) {
+              const fullName = extractLabel(person);
+              const nickname = person._NICK?.value || '';
               stats.oldestPerson = { 
-                name: extractLabel(person), 
+                name: fullName, 
+                displayName: formatDisplayName(fullName, nickname),
                 age: lifespan,
                 id: id
               };
@@ -1279,8 +1329,11 @@ function calculateStatistics() {
           stats.birthsByDecade[decade] = (stats.birthsByDecade[decade] || 0) + 1;
           
           if (!stats.youngestBirth || year > stats.youngestBirth.year) {
+            const fullName = extractLabel(person);
+            const nickname = person._NICK?.value || '';
             stats.youngestBirth = {
-              name: extractLabel(person),
+              name: fullName,
+              displayName: formatDisplayName(fullName, nickname),
               year: year,
               id: id
             };
@@ -1322,8 +1375,8 @@ function calculateStatistics() {
       if (family.CHIL) {
         const childCount = Array.isArray(family.CHIL) ? family.CHIL.length : 1;
         if (childCount > stats.mostChildren.count) {
-          const husbName = family.HUSB ? extractLabelById(family.HUSB.id, gedcomData) : 'Unknown';
-          const wifeName = family.WIFE ? extractLabelById(family.WIFE.id, gedcomData) : 'Unknown';
+          const husbName = family.HUSB ? extractDisplayNameById(family.HUSB.id, gedcomData) : 'Unknown';
+          const wifeName = family.WIFE ? extractDisplayNameById(family.WIFE.id, gedcomData) : 'Unknown';
           stats.mostChildren = {
             family: `${husbName} & ${wifeName}`,
             count: childCount,
@@ -1367,6 +1420,16 @@ function extractLabelById(id, gedcomData) {
   return person ? extractLabel(person) : 'Unknown';
 }
 
+// Extract display name (with nickname) by ID
+function extractDisplayNameById(id, gedcomData) {
+  if (!id || !gedcomData?.indviduals) return 'Unknown';
+  const person = gedcomData.indviduals.get(id);
+  if (!person) return 'Unknown';
+  const fullName = extractLabel(person);
+  const nickname = person._NICK?.value || '';
+  return formatDisplayName(fullName, nickname);
+}
+
 /**
  * Find potential duplicate persons
  * Uses name similarity and date matching
@@ -1388,16 +1451,23 @@ function findDuplicates() {
       const similarity = calculateSimilarity(person1, person2);
       
       if (similarity >= 0.7) {
+        const name1 = extractLabel(person1);
+        const nick1 = person1._NICK?.value || '';
+        const name2 = extractLabel(person2);
+        const nick2 = person2._NICK?.value || '';
+        
         duplicates.push({
           person1: {
             id: id1,
-            name: extractLabel(person1),
+            name: name1,
+            displayName: formatDisplayName(name1, nick1),
             birth: person1.BIRT?.DATE?.value || '',
             death: person1.DEAT?.DATE?.value || ''
           },
           person2: {
             id: id2,
-            name: extractLabel(person2),
+            name: name2,
+            displayName: formatDisplayName(name2, nick2),
             birth: person2.BIRT?.DATE?.value || '',
             death: person2.DEAT?.DATE?.value || ''
           },
@@ -1509,8 +1579,11 @@ function calculateRelationship(id1, id2) {
     const current = queue.shift();
     
     if (current.id === id2) {
+      // Get gender of person 2 for gender-specific relationship terms
+      const person2 = gedcomData.indviduals.get(id2);
+      const gender2 = person2?.SEX?.value || 'U';
       return {
-        relationship: describeRelationship(current.path),
+        relationship: describeRelationship(current.path, gender2),
         path: current.path,
         generations: current.generations
       };
@@ -1614,18 +1687,21 @@ function calculateRelationship(id1, id2) {
 /**
  * Describe relationship from path
  */
-function describeRelationship(path) {
+function describeRelationship(path, targetGender = 'U') {
   if (path.length <= 1) return 'Self';
   
   const relations = path.slice(1).map(p => p.relation);
+  const isMale = targetGender === 'M';
+  const isFemale = targetGender === 'F';
   
   // Simple direct relationships
   if (relations.length === 1) {
     const r = relations[0];
-    if (r === 'father' || r === 'mother') return 'Parent';
-    if (r === 'child') return 'Child';
-    if (r === 'sibling') return 'Sibling';
-    if (r === 'spouse') return 'Spouse';
+    if (r === 'father') return 'Father';
+    if (r === 'mother') return 'Mother';
+    if (r === 'child') return isMale ? 'Son' : isFemale ? 'Daughter' : 'Child';
+    if (r === 'sibling') return isMale ? 'Brother' : isFemale ? 'Sister' : 'Sibling';
+    if (r === 'spouse') return isMale ? 'Husband' : isFemale ? 'Wife' : 'Spouse';
   }
   
   if (relations.length === 2) {
@@ -1633,47 +1709,64 @@ function describeRelationship(path) {
     
     // Grandparent
     if ((r1 === 'father' || r1 === 'mother') && (r2 === 'father' || r2 === 'mother')) {
-      return 'Grandparent';
+      return isMale ? 'Grandfather' : isFemale ? 'Grandmother' : 'Grandparent';
     }
     // Grandchild
     if (r1 === 'child' && r2 === 'child') {
-      return 'Grandchild';
+      return isMale ? 'Grandson' : isFemale ? 'Granddaughter' : 'Grandchild';
     }
     // Aunt/Uncle
     if ((r1 === 'father' || r1 === 'mother') && r2 === 'sibling') {
-      return 'Aunt/Uncle';
+      return isMale ? 'Uncle' : isFemale ? 'Aunt' : 'Aunt/Uncle';
     }
     // Niece/Nephew
     if (r1 === 'sibling' && r2 === 'child') {
-      return 'Niece/Nephew';
+      return isMale ? 'Nephew' : isFemale ? 'Niece' : 'Niece/Nephew';
     }
     // Parent-in-law
     if (r1 === 'spouse' && (r2 === 'father' || r2 === 'mother')) {
-      return 'Parent-in-law';
+      return isMale ? 'Father-in-law' : isFemale ? 'Mother-in-law' : 'Parent-in-law';
     }
-    // Sibling-in-law
+    // Child-in-law (spouse of child)
+    if (r1 === 'child' && r2 === 'spouse') {
+      return isMale ? 'Son-in-law' : isFemale ? 'Daughter-in-law' : 'Child-in-law';
+    }
+    // Sibling-in-law (spouse's sibling)
     if (r1 === 'spouse' && r2 === 'sibling') {
-      return 'Sibling-in-law';
+      return isMale ? 'Brother-in-law' : isFemale ? 'Sister-in-law' : 'Sibling-in-law';
     }
+    // Sibling-in-law (sibling's spouse)
     if (r1 === 'sibling' && r2 === 'spouse') {
-      return 'Sibling-in-law';
+      return isMale ? 'Brother-in-law' : isFemale ? 'Sister-in-law' : 'Sibling-in-law';
     }
   }
   
   if (relations.length === 3) {
+    const [r1, r2, r3] = relations;
+    
     // Cousin
-    if ((relations[0] === 'father' || relations[0] === 'mother') &&
-        relations[1] === 'sibling' &&
-        relations[2] === 'child') {
+    if ((r1 === 'father' || r1 === 'mother') && r2 === 'sibling' && r3 === 'child') {
       return 'First Cousin';
     }
     // Great-grandparent
     if (relations.every(r => r === 'father' || r === 'mother')) {
-      return 'Great-grandparent';
+      return isMale ? 'Great-grandfather' : isFemale ? 'Great-grandmother' : 'Great-grandparent';
     }
     // Great-grandchild
     if (relations.every(r => r === 'child')) {
-      return 'Great-grandchild';
+      return isMale ? 'Great-grandson' : isFemale ? 'Great-granddaughter' : 'Great-grandchild';
+    }
+    // Great Aunt/Uncle
+    if ((r1 === 'father' || r1 === 'mother') && (r2 === 'father' || r2 === 'mother') && r3 === 'sibling') {
+      return isMale ? 'Great-uncle' : isFemale ? 'Great-aunt' : 'Great-aunt/uncle';
+    }
+    // Grand Niece/Nephew
+    if (r1 === 'sibling' && r2 === 'child' && r3 === 'child') {
+      return isMale ? 'Grand-nephew' : isFemale ? 'Grand-niece' : 'Grand-niece/nephew';
+    }
+    // Cousin's spouse
+    if ((r1 === 'father' || r1 === 'mother') && r2 === 'sibling' && r3 === 'spouse') {
+      return 'Cousin-in-law';
     }
   }
   
@@ -1692,6 +1785,19 @@ function describeRelationship(path) {
       return `${getOrdinal(cousinNum)} Cousin`;
     }
     return `${getOrdinal(cousinNum)} Cousin ${removed}x removed`;
+  }
+  
+  // Handle great-great etc.
+  if (up >= 3 && down === 0 && sideways === 0) {
+    const greats = up - 2;
+    const prefix = greats > 0 ? 'Great-'.repeat(greats) : '';
+    return isMale ? `${prefix}Grandfather` : isFemale ? `${prefix}Grandmother` : `${prefix}Grandparent`;
+  }
+  
+  if (down >= 3 && up === 0 && sideways === 0) {
+    const greats = down - 2;
+    const prefix = greats > 0 ? 'Great-'.repeat(greats) : '';
+    return isMale ? `${prefix}Grandson` : isFemale ? `${prefix}Granddaughter` : `${prefix}Grandchild`;
   }
   
   return `${path.length - 1} steps away`;
@@ -1767,5 +1873,8 @@ export {
   isDragEnabled,
   lockNodes,
   unlockNodes,
-  calculateRelationship
+  calculateRelationship,
+  formatDisplayName,
+  getShowNicknameSetting,
+  setShowNicknameSetting
 };
