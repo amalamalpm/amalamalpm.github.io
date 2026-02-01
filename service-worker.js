@@ -1,9 +1,12 @@
 /**
- * Service Worker for GEDCOM Family Tree Editor
- * Provides offline capability and caching
+ * GEDCOM Family Tree Editor
+ * Copyright (c) 2024-2026 amalamalpm
+ * Licensed under MIT License - see LICENSE.txt
+ * 
+ * Service Worker - Offline capability and caching
  */
 
-const CACHE_NAME = 'gedcom-editor-v21';
+const CACHE_NAME = 'gedcom-editor-v52';
 const ASSETS = [
   '/',
   '/index.html',
@@ -14,10 +17,9 @@ const ASSETS = [
   '/js/gedcom_export.js',
   '/js/gedcom_import.js',
   '/js/shortcuts.js',
-  '/js/state2.js',
+  '/js/undo_state.js',
   '/js/timeline.js',
   '/js/csv_import.js',
-  '/js/storage.js',
   '/js/security.js',
   '/manifest.json'
 ];
