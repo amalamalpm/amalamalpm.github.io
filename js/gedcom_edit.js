@@ -1,7 +1,25 @@
+/**
+ * GEDCOM Family Tree Editor
+ * Copyright (c) 2024-2026 amalamalpm
+ * Licensed under MIT License - see LICENSE.txt
+ */
+
 import {FamilyRow} from './gedcom.js';
 import {escapeHtml, validateImageFile, sanitizeImportedValue} from './security.js';
 
 const debugTrace = false; // SECURITY: Disabled for production
+
+/**
+ * Format a full name - just trim and clean up whitespace
+ * @param {string} fullName - The full name to format
+ * @returns {string} Cleaned name
+ */
+function formatGedcomName(fullName) {
+    if (!fullName || typeof fullName !== 'string') {
+        return '';
+    }
+    return fullName.trim().replace(/\s+/g, ' ');
+}
 
 const partner = 'partner';
 const sibling = 'sibling';
@@ -19,6 +37,16 @@ const displayFileContent = function (familyRow) {
     const selectedCard = document.getElementById('selected-person-card');
     if (selectedCard) {
         selectedCard.classList.add('visible');
+    }
+    
+    // Show the add relative card (only for individuals, not families)
+    const addRelativeCard = document.getElementById('add-relative-card');
+    if (addRelativeCard) {
+        if (familyRow.tag === 'INDI') {
+            addRelativeCard.classList.add('visible');
+        } else {
+            addRelativeCard.classList.remove('visible');
+        }
     }
     
     // On mobile, auto-open the bottom sheet to show person details
@@ -67,9 +95,17 @@ function createNewNode(rootFamilyRow, genderIp) {
     const newNode = new FamilyRow(0, nextIndividualID(rootFamilyRow), "INDI", undefined)
 
     let newNodeName = document.getElementById("newNodeNameValue").value;
-    newNode.NAME = new FamilyRow(1, undefined, "NAME", newNodeName)
+    // Clean up the name
+    const formattedName = formatGedcomName(newNodeName);
+    newNode.NAME = new FamilyRow(1, undefined, "NAME", formattedName)
 
-    let gender = genderIp? genderIp : document.querySelector('input[name="newNodeGender"]:checked').value;
+    // Get gender from parameter or from radio button
+    let gender = genderIp;
+    if (!gender) {
+        const genderRadio = document.querySelector('input[name="newNodeGender"]:checked');
+        gender = genderRadio ? genderRadio.value : null;
+    }
+    
     if (gender) {
         newNode.SEX = new FamilyRow(1, undefined, "SEX", gender)
     }
@@ -234,6 +270,15 @@ function addNewNode(typeOfNewNode) {
     const currentFamilyRow = document.currentlySelectedFamilyRow[0]
     const rootFamilyRow = findRoot(document.dataParsed);
 
+    // Validate gender is selected (except for 'parent' which auto-creates both)
+    if (typeOfNewNode !== parent) {
+        const genderRadio = document.querySelector('input[name="newNodeGender"]:checked');
+        if (!genderRadio) {
+            alert('⚠️ Please select a gender (Male, Female, or Other) before adding a relative.');
+            return;
+        }
+    }
+
     switch (typeOfNewNode) {
         case partner:
             console.log("Add as partner");
@@ -327,6 +372,194 @@ function convertFromDateInput(htmlDate) {
     return htmlDate;
 }
 
+// Open flexible date picker modal
+function openDatePicker(targetInputId) {
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 
+                    'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    
+    // Get current value to pre-fill
+    const targetInput = document.getElementById(targetInputId);
+    const currentValue = targetInput ? targetInput.value : '';
+    
+    // Parse current value
+    let currentYear = new Date().getFullYear();
+    let currentMonth = '';
+    let currentDay = '';
+    
+    if (currentValue) {
+        // Try full date: DD MMM YYYY
+        const fullMatch = currentValue.match(/(\d{1,2})\s+([A-Z]{3})\s+(\d{4})/i);
+        if (fullMatch) {
+            currentDay = fullMatch[1];
+            currentMonth = fullMatch[2].toUpperCase();
+            currentYear = fullMatch[3];
+        } else {
+            // Try MMM YYYY
+            const monthYearMatch = currentValue.match(/([A-Z]{3})\s+(\d{4})/i);
+            if (monthYearMatch) {
+                currentMonth = monthYearMatch[1].toUpperCase();
+                currentYear = monthYearMatch[2];
+            } else {
+                // Try just year
+                const yearMatch = currentValue.match(/(\d{4})/);
+                if (yearMatch) {
+                    currentYear = yearMatch[1];
+                }
+            }
+        }
+    }
+    
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay active';
+    modal.id = 'datePickerModal';
+    modal.innerHTML = `
+        <div class="modal-content" style="width:340px;max-width:95%;">
+            <div class="modal-header">
+                <h2>📅 Select Date</h2>
+                <button class="modal-close" onclick="closeDatePickerModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex;flex-direction:column;gap:16px;">
+                    <!-- Date Format Selection -->
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label style="font-weight:700;margin-bottom:8px;">Date Precision</label>
+                        <div class="radio-group" style="flex-direction:column;gap:8px;">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                <input type="radio" name="datePrecision" value="full" ${currentDay ? 'checked' : ''} onchange="toggleDateFields(this.value)">
+                                <span>Full date (day, month, year)</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                <input type="radio" name="datePrecision" value="monthYear" ${!currentDay && currentMonth ? 'checked' : ''} onchange="toggleDateFields(this.value)">
+                                <span>Month & year only</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                <input type="radio" name="datePrecision" value="yearOnly" ${!currentDay && !currentMonth ? 'checked' : ''} onchange="toggleDateFields(this.value)">
+                                <span>Year only</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Date Fields -->
+                    <div style="display:flex;gap:10px;align-items:flex-end;">
+                        <div class="form-group" id="dayField" style="flex:1;margin-bottom:0;${currentDay ? '' : 'display:none;'}">
+                            <label>Day</label>
+                            <select id="datePickerDay" style="width:100%;">
+                                <option value="">--</option>
+                                ${Array.from({length: 31}, (_, i) => `<option value="${i+1}" ${currentDay == (i+1) ? 'selected' : ''}>${i+1}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group" id="monthField" style="flex:1.5;margin-bottom:0;${currentMonth || currentDay ? '' : 'display:none;'}">
+                            <label>Month</label>
+                            <select id="datePickerMonth" style="width:100%;">
+                                <option value="">--</option>
+                                ${months.map((m, i) => `<option value="${m}" ${currentMonth === m ? 'selected' : ''}>${m}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex:1.5;margin-bottom:0;">
+                            <label>Year *</label>
+                            <input type="number" id="datePickerYear" min="1" max="2100" value="${currentYear}" style="width:100%;" required>
+                        </div>
+                    </div>
+                    
+                    <!-- Prefix for approximate dates -->
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Date Qualifier (optional)</label>
+                        <select id="datePickerPrefix" style="width:100%;">
+                            <option value="">Exact date</option>
+                            <option value="ABT">ABT - About/Approximately</option>
+                            <option value="BEF">BEF - Before</option>
+                            <option value="AFT">AFT - After</option>
+                            <option value="EST">EST - Estimated</option>
+                            <option value="CAL">CAL - Calculated</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display:flex;gap:12px;margin-top:20px;">
+                    <button class="btn-outline" onclick="closeDatePickerModal()" style="flex:1;">Cancel</button>
+                    <button class="btn-primary" onclick="applyDatePicker('${targetInputId}')" style="flex:1;">Apply</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Set initial precision based on current value
+    if (!currentDay && !currentMonth) {
+        toggleDateFields('yearOnly');
+    } else if (!currentDay && currentMonth) {
+        toggleDateFields('monthYear');
+    }
+}
+
+// Toggle date fields based on precision selection
+function toggleDateFields(precision) {
+    const dayField = document.getElementById('dayField');
+    const monthField = document.getElementById('monthField');
+    
+    if (precision === 'full') {
+        dayField.style.display = '';
+        monthField.style.display = '';
+    } else if (precision === 'monthYear') {
+        dayField.style.display = 'none';
+        monthField.style.display = '';
+        document.getElementById('datePickerDay').value = '';
+    } else { // yearOnly
+        dayField.style.display = 'none';
+        monthField.style.display = 'none';
+        document.getElementById('datePickerDay').value = '';
+        document.getElementById('datePickerMonth').value = '';
+    }
+}
+
+// Apply selected date to target input
+function applyDatePicker(targetInputId) {
+    const year = document.getElementById('datePickerYear').value;
+    const month = document.getElementById('datePickerMonth').value;
+    const day = document.getElementById('datePickerDay').value;
+    const prefix = document.getElementById('datePickerPrefix').value;
+    
+    if (!year) {
+        alert('Please enter a year');
+        return;
+    }
+    
+    // Build date string based on what's provided
+    let dateStr = '';
+    
+    if (day && month) {
+        dateStr = `${day} ${month} ${year}`;
+    } else if (month) {
+        dateStr = `${month} ${year}`;
+    } else {
+        dateStr = year;
+    }
+    
+    // Add prefix if selected
+    if (prefix) {
+        dateStr = `${prefix} ${dateStr}`;
+    }
+    
+    // Apply to target input
+    const targetInput = document.getElementById(targetInputId);
+    if (targetInput) {
+        targetInput.value = dateStr;
+        targetInput.dispatchEvent(new Event('change'));
+    }
+    
+    closeDatePickerModal();
+}
+
+// Close date picker modal
+function closeDatePickerModal() {
+    const modal = document.getElementById('datePickerModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
 function showAllValuesAndChildValues(familyRow, cacheIndex) {
     if (familyRow.tag === 'INDI') {
         return generatePersonTabs(familyRow);
@@ -356,24 +589,21 @@ function generatePersonTabs(familyRow) {
     html += `</div>`;
     html += `</div>`;
     
-    // Tabs
+    // Tabs - General first, Family second
     html += `<div class="person-tabs">`;
     html += `<button class="person-tab active" onclick="switchTab('general', this)"><span class="person-tab-icon">👤</span>General</button>`;
+    html += `<button class="person-tab" onclick="switchTab('family', this)"><span class="person-tab-icon">👨‍👩‍👧</span>Family</button>`;
     html += `<button class="person-tab" onclick="switchTab('contact', this)"><span class="person-tab-icon">📱</span>Contact</button>`;
     html += `<button class="person-tab" onclick="switchTab('social', this)"><span class="person-tab-icon">🌐</span>Social</button>`;
-    html += `<button class="person-tab" onclick="switchTab('family', this)"><span class="person-tab-icon">👨‍👩‍👧</span>Family</button>`;
-    html += `<button class="person-tab" onclick="switchTab('more', this)"><span class="person-tab-icon">📝</span>More</button>`;
+    html += `<button class="person-tab" onclick="switchTab('more', this)"><span class="person-tab-icon">⚙️</span>More</button>`;
     html += `</div>`;
     
-    // Tab Contents
+    // Tab Contents - General first, Family second
     html += `<div id="tab-general" class="tab-content active">${generateGeneralTab(familyRow)}</div>`;
+    html += `<div id="tab-family" class="tab-content">${generateFamilyTab(familyRow)}</div>`;
     html += `<div id="tab-contact" class="tab-content">${generateContactTab(familyRow)}</div>`;
     html += `<div id="tab-social" class="tab-content">${generateSocialTab(familyRow)}</div>`;
-    html += `<div id="tab-family" class="tab-content">${generateFamilyTab(familyRow)}</div>`;
     html += `<div id="tab-more" class="tab-content">${generateMoreTab(familyRow)}</div>`;
-    
-    // Delete button
-    html += `<hr><button class="btn-danger btn-sm" onclick="deleteNode()" style="width:100%">🗑 Delete Person</button>`;
     
     return html;
 }
@@ -385,7 +615,7 @@ function generateGeneralTab(familyRow) {
     // Full Name - SECURITY: escape user input for attribute
     html += `<div class="form-group">`;
     html += `<label>Full Name <small style="color:var(--text-muted);font-weight:normal;">(First Last)</small></label>`;
-    html += `<input type="text" placeholder="John Smith" value="${escapeHtml(getFieldValue(familyRow, 'NAME').replace(/\//g, ' ').trim())}" onchange="updatePersonField(this, 'NAME', '/' + this.value.split(' ').pop() + '/')" autocomplete="name">`;
+    html += `<input type="text" placeholder="John Smith" value="${escapeHtml(getFieldValue(familyRow, 'NAME').replace(/\//g, ' ').trim())}" onchange="updatePersonField(this, 'NAME')" autocomplete="name">`;
     html += `</div>`;
     
     // Nickname
@@ -404,35 +634,20 @@ function generateGeneralTab(familyRow) {
     html += `<label><input type="radio" name="personGender" value="O" ${sex === 'O' ? 'checked' : ''} onchange="updatePersonField(this, 'SEX')"> 🧑 Other</label>`;
     html += `</div></div>`;
     
-    // Date of Birth with date picker
+    // Date of Birth - flexible input supporting partial dates
     html += `<div class="form-group">`;
     html += `<label>Date of Birth 📅</label>`;
-    html += `<input type="date" value="${escapeHtml(convertToDateInput(getFieldValue(familyRow, 'BIRT', 'DATE')))}" onchange="updateNestedField(this, 'BIRT', 'DATE', true)" style="cursor:pointer;">`;
-    html += `<small style="color:var(--text-muted);display:block;margin-top:2px;">Or type: 15 Jan 1990</small>`;
+    html += `<div style="display:flex;gap:8px;align-items:center;">`;
+    html += `<input type="text" id="dobInput" placeholder="e.g., 1990, JAN 1990, 15 JAN 1990" value="${escapeHtml(getFieldValue(familyRow, 'BIRT', 'DATE'))}" onchange="updateNestedField(this, 'BIRT', 'DATE')" style="flex:1;">`;
+    html += `<button type="button" class="btn-outline btn-sm" onclick="openDatePicker('dobInput')" title="Open date picker" style="padding:8px 12px;white-space:nowrap;">📅</button>`;
+    html += `</div>`;
+    html += `<small style="color:var(--text-muted);display:block;margin-top:4px;">Formats: 1990 | JAN 1990 | 15 JAN 1990 | ABT 1990</small>`;
     html += `</div>`;
     
     // Place of Birth
     html += `<div class="form-group">`;
     html += `<label>Place of Birth 📍</label>`;
     html += `<input type="text" placeholder="City, State, Country" value="${escapeHtml(getFieldValue(familyRow, 'BIRT', 'PLAC'))}" onchange="updateNestedField(this, 'BIRT', 'PLAC')">`;
-    html += `</div>`;
-    
-    // Alive toggle
-    html += `<div class="alive-toggle ${isAlive ? '' : 'deceased'}">`;
-    html += `<input type="checkbox" id="isAliveCheck" ${isAlive ? 'checked' : ''} onchange="toggleDeathFields(this)">`;
-    html += `<label for="isAliveCheck">${isAlive ? '✅ Currently Living' : '⚫ Deceased'}</label>`;
-    html += `</div>`;
-    
-    // Death fields (hidden by default if alive)
-    html += `<div class="death-fields ${isAlive ? '' : 'visible'}" id="deathFields">`;
-    html += `<div class="form-group">`;
-    html += `<label>Date of Death 📅</label>`;
-    html += `<input type="date" value="${escapeHtml(convertToDateInput(getFieldValue(familyRow, 'DEAT', 'DATE')))}" onchange="updateNestedField(this, 'DEAT', 'DATE', true)">`;
-    html += `</div>`;
-    html += `<div class="form-group">`;
-    html += `<label>Place of Death 📍</label>`;
-    html += `<input type="text" placeholder="City, State, Country" value="${escapeHtml(getFieldValue(familyRow, 'DEAT', 'PLAC'))}" onchange="updateNestedField(this, 'DEAT', 'PLAC')">`;
-    html += `</div>`;
     html += `</div>`;
     
     return html;
@@ -519,33 +734,8 @@ function generateSocialTab(familyRow) {
 function generateFamilyTab(familyRow) {
     let html = '';
     
-    // Current family members section
+    // Current family members section only
     html += generateCurrentFamilyMembers(familyRow);
-    
-    // Add new relative section
-    html += `<div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);">`;
-    html += `<label style="font-weight:700; font-size:0.85rem; color:var(--text-dark); margin-bottom:8px; display:block;">➕ Add New Relative</label>`;
-    
-    html += `<div class="form-group">`;
-    html += `<label>Name</label>`;
-    html += `<input type="text" id="newNodeNameValue" placeholder="Enter full name" autocomplete="off">`;
-    html += `</div>`;
-    
-    html += `<div class="form-group">`;
-    html += `<label>Gender</label>`;
-    html += `<div class="radio-group">`;
-    html += `<label><input type="radio" name="newNodeGender" value="M"> 👨 Male</label>`;
-    html += `<label><input type="radio" name="newNodeGender" value="F"> 👩 Female</label>`;
-    html += `<label><input type="radio" name="newNodeGender" value="O"> 🧑 Other</label>`;
-    html += `</div></div>`;
-    
-    html += `<div class="btn-group" style="margin-top:12px">`;
-    html += `<button class="btn-secondary btn-sm" onclick="addNewNode('${partner}')">💑 Spouse</button>`;
-    html += `<button class="btn-secondary btn-sm" onclick="addNewNode('${child_from_parent}')">👶 Child</button>`;
-    html += `<button class="btn-secondary btn-sm" onclick="addNewNode('${parent}')">👨‍👩‍👦 Parents</button>`;
-    html += `<button class="btn-secondary btn-sm" onclick="addNewNode('${sibling}')">👫 Sibling</button>`;
-    html += `</div>`;
-    html += `</div>`;
     
     return html;
 }
@@ -718,7 +908,34 @@ function generateCurrentFamilyMembers(familyRow) {
 }
 
 function generateMoreTab(familyRow) {
+    const isAlive = !(familyRow.DEAT && (familyRow.DEAT.DATE || familyRow.DEAT.PLAC));
     let html = '';
+    
+    // Life Status section
+    html += `<div style="margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--border);">`;
+    html += `<label style="font-weight:700; font-size:0.85rem; color:var(--text-dark); margin-bottom:8px; display:block;">🕯️ Life Status</label>`;
+    
+    // Alive toggle
+    html += `<div class="alive-toggle ${isAlive ? '' : 'deceased'}">`;
+    html += `<input type="checkbox" id="isAliveCheck" ${isAlive ? 'checked' : ''} onchange="toggleDeathFields(this)">`;
+    html += `<label for="isAliveCheck">${isAlive ? '✅ Currently Living' : '⚫ Deceased'}</label>`;
+    html += `</div>`;
+    
+    // Death fields (hidden by default if alive)
+    html += `<div class="death-fields ${isAlive ? '' : 'visible'}" id="deathFields">`;
+    html += `<div class="form-group">`;
+    html += `<label>Date of Death 📅</label>`;
+    html += `<div style="display:flex;gap:8px;align-items:center;">`;
+    html += `<input type="text" id="dodInput" placeholder="e.g., 1616, APR 1616, 23 APR 1616" value="${escapeHtml(getFieldValue(familyRow, 'DEAT', 'DATE'))}" onchange="updateNestedField(this, 'DEAT', 'DATE')" style="flex:1;">`;
+    html += `<button type="button" class="btn-outline btn-sm" onclick="openDatePicker('dodInput')" title="Open date picker" style="padding:8px 12px;white-space:nowrap;">📅</button>`;
+    html += `</div>`;
+    html += `</div>`;
+    html += `<div class="form-group">`;
+    html += `<label>Place of Death 📍</label>`;
+    html += `<input type="text" placeholder="City, State, Country" value="${escapeHtml(getFieldValue(familyRow, 'DEAT', 'PLAC'))}" onchange="updateNestedField(this, 'DEAT', 'PLAC')">`;
+    html += `</div>`;
+    html += `</div>`;
+    html += `</div>`;
     
     // Occupation - SECURITY: escape all user input values
     html += `<div class="form-group">`;
@@ -766,34 +983,115 @@ function generateMoreTab(familyRow) {
     // Custom field adder
     html += optionToAddNewNode();
     
+    // Delete Person (danger zone)
+    html += `<div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--danger);">`;
+    html += `<label style="font-weight:700; font-size:0.85rem; color:var(--danger); margin-bottom:8px; display:block;">⚠️ Danger Zone</label>`;
+    html += `<button class="btn-danger btn-sm" onclick="if(confirm('Are you sure you want to delete this person? This cannot be undone.')) deleteNode()" style="width:100%">🗑 Delete This Person</button>`;
+    html += `</div>`;
+    
     return html;
 }
 
 function generateFamilyView(familyRow) {
+    const rootFamilyRow = findRoot(document.dataParsed);
     let html = '';
+    
     html += `<div style="margin-bottom:16px;">`;
-    html += `<h3 style="margin:0 0 4px 0; font-size:1.1rem;">Family ${familyRow.id}</h3>`;
+    html += `<h3 style="margin:0 0 4px 0; font-size:1.1rem;">👨‍👩‍👧 Family ${escapeHtml(familyRow.id)}</h3>`;
     html += `<p style="margin:0; color:#64748b; font-size:0.85rem;">Family Record</p>`;
     html += `</div>`;
     
-    // Show family members
-    html += showAllValuesAndChildValues1(familyRow);
+    // Show Husband(s)
+    html += `<div class="form-group">`;
+    html += `<label>👨 Husband</label>`;
+    if (familyRow.HUSB) {
+        const husbList = Array.isArray(familyRow.HUSB) ? familyRow.HUSB : [familyRow.HUSB];
+        husbList.forEach(h => {
+            const person = rootFamilyRow?.indviduals?.get(h.id);
+            const name = person ? escapeHtml(getFieldValue(person, 'NAME').replace(/\//g, ' ').trim()) : h.id;
+            html += `<div class="family-member-item" style="margin-top:4px;" onclick="goToFamilyMember('${escapeHtml(h.id)}', false)">`;
+            html += `<span class="family-member-icon">👨</span>`;
+            html += `<span class="family-member-name">${name || h.id}</span>`;
+            html += `</div>`;
+        });
+    } else {
+        html += `<div style="color:var(--text-muted);font-style:italic;padding:8px 0;">No husband linked</div>`;
+    }
+    html += `</div>`;
+    
+    // Show Wife/Wives
+    html += `<div class="form-group">`;
+    html += `<label>👩 Wife</label>`;
+    if (familyRow.WIFE) {
+        const wifeList = Array.isArray(familyRow.WIFE) ? familyRow.WIFE : [familyRow.WIFE];
+        wifeList.forEach(w => {
+            const person = rootFamilyRow?.indviduals?.get(w.id);
+            const name = person ? escapeHtml(getFieldValue(person, 'NAME').replace(/\//g, ' ').trim()) : w.id;
+            html += `<div class="family-member-item" style="margin-top:4px;" onclick="goToFamilyMember('${escapeHtml(w.id)}', false)">`;
+            html += `<span class="family-member-icon">👩</span>`;
+            html += `<span class="family-member-name">${name || w.id}</span>`;
+            html += `</div>`;
+        });
+    } else {
+        html += `<div style="color:var(--text-muted);font-style:italic;padding:8px 0;">No wife linked</div>`;
+    }
+    html += `</div>`;
+    
+    // Marriage Date & Place
+    html += `<div style="margin:16px 0; padding:12px; background:var(--bg-light); border-radius:8px; border:1px solid var(--border);">`;
+    html += `<label style="font-weight:700; display:block; margin-bottom:10px;">💍 Marriage Details</label>`;
+    
+    html += `<div class="form-group" style="margin-bottom:10px;">`;
+    html += `<label style="font-size:0.85rem;">Marriage Date</label>`;
+    html += `<div style="display:flex;gap:8px;align-items:center;">`;
+    html += `<input type="text" id="marrDateInput" placeholder="e.g., 1582, NOV 1582, 28 NOV 1582" value="${escapeHtml(getFieldValue(familyRow, 'MARR', 'DATE'))}" onchange="updateFamilyNestedField(this, 'MARR', 'DATE')" style="flex:1;">`;
+    html += `<button type="button" class="btn-outline btn-sm" onclick="openDatePicker('marrDateInput')" title="Open date picker" style="padding:8px 12px;white-space:nowrap;">📅</button>`;
+    html += `</div>`;
+    html += `</div>`;
+    
+    html += `<div class="form-group" style="margin-bottom:0;">`;
+    html += `<label style="font-size:0.85rem;">Marriage Place</label>`;
+    html += `<input type="text" placeholder="City, State, Country" value="${escapeHtml(getFieldValue(familyRow, 'MARR', 'PLAC'))}" onchange="updateFamilyNestedField(this, 'MARR', 'PLAC')">`;
+    html += `</div>`;
+    html += `</div>`;
+    
+    // Show Children
+    html += `<div class="form-group">`;
+    html += `<label>👶 Children</label>`;
+    if (familyRow.CHIL) {
+        const childList = Array.isArray(familyRow.CHIL) ? familyRow.CHIL : [familyRow.CHIL];
+        childList.forEach(c => {
+            const person = rootFamilyRow?.indviduals?.get(c.id);
+            const name = person ? escapeHtml(getFieldValue(person, 'NAME').replace(/\//g, ' ').trim()) : c.id;
+            const gender = person ? getFieldValue(person, 'SEX') : '';
+            html += `<div class="family-member-item" style="margin-top:4px;" onclick="goToFamilyMember('${escapeHtml(c.id)}', false)">`;
+            html += `<span class="family-member-icon">${gender === 'M' ? '👦' : gender === 'F' ? '👧' : '👶'}</span>`;
+            html += `<span class="family-member-name">${name || c.id}</span>`;
+            html += `</div>`;
+        });
+    } else {
+        html += `<div style="color:var(--text-muted);font-style:italic;padding:8px 0;">No children linked</div>`;
+    }
+    html += `</div>`;
     
     // Add child option
-    html += `<hr>`;
-    html += `<div class="form-group">`;
-    html += `<label>Add Child's Name</label>`;
+    html += `<hr style="margin:16px 0;">`;
+    html += `<div style="padding:12px; background:var(--bg-light); border-radius:8px; border:1px solid var(--border);">`;
+    html += `<label style="font-weight:700; display:block; margin-bottom:10px;">➕ Add New Child</label>`;
+    html += `<div class="form-group" style="margin-bottom:10px;">`;
+    html += `<label style="font-size:0.85rem;">Child's Name</label>`;
     html += `<input type="text" id="newNodeNameValue" placeholder="Enter name">`;
     html += `</div>`;
-    html += `<div class="form-group">`;
-    html += `<label>Gender</label>`;
+    html += `<div class="form-group" style="margin-bottom:10px;">`;
+    html += `<label style="font-size:0.85rem;">Gender</label>`;
     html += `<div class="radio-group">`;
-    html += `<label><input type="radio" name="newNodeGender" value="M"> Male</label>`;
-    html += `<label><input type="radio" name="newNodeGender" value="F"> Female</label>`;
+    html += `<label><input type="radio" name="newNodeGender" value="M"> 👦 Male</label>`;
+    html += `<label><input type="radio" name="newNodeGender" value="F"> 👧 Female</label>`;
     html += `</div></div>`;
-    html += `<button class="btn-secondary btn-sm" onclick="addNewNode('${child}')">👶 Add Child</button>`;
+    html += `<button class="btn-secondary btn-sm" onclick="addNewNode('${child}')" style="width:100%;">👶 Add Child</button>`;
+    html += `</div>`;
     
-    html += `<hr><button class="btn-danger btn-sm" onclick="deleteNode()" style="width:100%">🗑 Delete Family</button>`;
+    html += `<hr style="margin:16px 0;"><button class="btn-danger btn-sm" onclick="deleteNode()" style="width:100%">🗑 Delete Family</button>`;
     
     return html;
 }
@@ -1195,12 +1493,9 @@ function updatePersonField(input, tag, valueSuffix = '') {
     if (!familyRow) return;
     
     let newValue = input.value;
-    if (valueSuffix && tag === 'NAME') {
-        // For name, construct proper GEDCOM format: First /Surname/
-        const parts = newValue.split(' ');
-        const surname = parts.pop() || '';
-        const given = parts.join(' ') || '';
-        newValue = given + ' /' + surname + '/';
+    if (tag === 'NAME') {
+        // Clean up the name
+        newValue = formatGedcomName(newValue);
     }
     
     if (familyRow[tag]) {
@@ -1212,9 +1507,86 @@ function updatePersonField(input, tag, valueSuffix = '') {
     
     console.log(`Updated ${tag} to: ${newValue}`);
     
+    // If gender changed, update family relationships (HUSB <-> WIFE)
+    if (tag === 'SEX' && familyRow.FAMS) {
+        updateFamilyRolesOnGenderChange(familyRow, newValue);
+    }
+    
+    // Update graph node immediately
+    if (window.updateAllNodesData) {
+        window.updateAllNodesData();
+    }
+    
     // Trigger auto-save
     if (window.triggerAutoSave) {
         window.triggerAutoSave();
+    }
+}
+
+// Update HUSB/WIFE roles in families when person's gender changes
+function updateFamilyRolesOnGenderChange(person, newGender) {
+    const rootFamilyRow = findRoot(document.dataParsed);
+    if (!rootFamilyRow) return;
+    
+    const personId = person.id;
+    const famsList = Array.isArray(person.FAMS) ? person.FAMS : [person.FAMS];
+    
+    famsList.forEach(famsRef => {
+        if (!famsRef || !famsRef.id) return;
+        
+        const family = rootFamilyRow.families.get(famsRef.id);
+        if (!family) return;
+        
+        if (newGender === 'M') {
+            // Changing to Male: remove from WIFE, add to HUSB
+            removePersonFromRole(family, 'WIFE', personId);
+            addPersonToRole(family, 'HUSB', personId);
+            console.log(`Moved ${personId} from WIFE to HUSB in family ${family.id}`);
+        } else if (newGender === 'F') {
+            // Changing to Female: remove from HUSB, add to WIFE
+            removePersonFromRole(family, 'HUSB', personId);
+            addPersonToRole(family, 'WIFE', personId);
+            console.log(`Moved ${personId} from HUSB to WIFE in family ${family.id}`);
+        }
+        // For 'O' (Other) gender, we leave the relationship as-is
+    });
+}
+
+// Remove a person from a family role (HUSB or WIFE)
+function removePersonFromRole(family, role, personId) {
+    if (!family[role]) return;
+    
+    if (Array.isArray(family[role])) {
+        const index = family[role].findIndex(r => r.id === personId);
+        if (index > -1) {
+            family[role].splice(index, 1);
+            // If array is now empty, remove the property
+            if (family[role].length === 0) {
+                delete family[role];
+            }
+        }
+    } else if (family[role].id === personId) {
+        delete family[role];
+    }
+}
+
+// Add a person to a family role (HUSB or WIFE)
+function addPersonToRole(family, role, personId) {
+    // Check if already in this role
+    if (family[role]) {
+        const existing = Array.isArray(family[role]) ? family[role] : [family[role]];
+        if (existing.some(r => r.id === personId)) {
+            return; // Already in this role
+        }
+        // Add to existing array
+        if (Array.isArray(family[role])) {
+            family[role].push(new FamilyRow(1, personId, role, undefined));
+        } else {
+            family[role] = [family[role], new FamilyRow(1, personId, role, undefined)];
+        }
+    } else {
+        // Create new role entry
+        family[role] = [new FamilyRow(1, personId, role, undefined)];
     }
 }
 
@@ -1245,6 +1617,40 @@ function updateNestedField(input, parentTag, childTag, isDateField = false) {
     
     console.log(`Updated ${parentTag}/${childTag} to: ${newValue}`);
     
+    // Update graph node immediately
+    if (window.updateAllNodesData) {
+        window.updateAllNodesData();
+    }
+    
+    // Trigger auto-save
+    if (window.triggerAutoSave) {
+        window.triggerAutoSave();
+    }
+}
+
+// Update a nested field on a Family record (e.g., MARR/DATE, MARR/PLAC)
+function updateFamilyNestedField(input, parentTag, childTag) {
+    const familyRow = document.currentlySelectedFamilyRow[0];
+    if (!familyRow || familyRow.tag !== 'FAM') return;
+    
+    let newValue = input.value;
+    
+    // Ensure parent tag exists (e.g., MARR)
+    if (!familyRow[parentTag]) {
+        familyRow[parentTag] = new FamilyRow(1, null, parentTag, null);
+        familyRow[parentTag].parent = familyRow;
+    }
+    
+    // Update or create child tag (e.g., DATE, PLAC)
+    if (familyRow[parentTag][childTag]) {
+        familyRow[parentTag][childTag].value = newValue;
+    } else {
+        familyRow[parentTag][childTag] = new FamilyRow(2, null, childTag, newValue);
+        familyRow[parentTag][childTag].parent = familyRow[parentTag];
+    }
+    
+    console.log(`Updated Family ${parentTag}/${childTag} to: ${newValue}`);
+    
     // Trigger auto-save
     if (window.triggerAutoSave) {
         window.triggerAutoSave();
@@ -1264,10 +1670,15 @@ function goToFamilyMember(personId, keepTab = true) {
             window.centerOnSearchResult(personId);
         }
         
-        // Also update the focus person dropdown
+        // Also update the focus person dropdown (hidden input and search display)
         const focusPersonSelect = document.getElementById('focusPerson');
+        const focusPersonSearch = document.getElementById('focusPersonSearch');
         if (focusPersonSelect) {
             focusPersonSelect.value = personId;
+        }
+        if (focusPersonSearch && person.NAME) {
+            const name = person.NAME.value ? person.NAME.value.replace(/\//g, '') : personId;
+            focusPersonSearch.value = name;
         }
         
         // Then display their details (slight delay to let animation start)
@@ -1276,7 +1687,7 @@ function goToFamilyMember(personId, keepTab = true) {
             
             // If keepTab is true, switch to Family tab after content loads
             if (keepTab && window.switchTab) {
-                const familyTabBtn = document.querySelector('.person-tab:nth-child(4)'); // Family is 4th tab
+                const familyTabBtn = document.querySelector('.person-tab:nth-child(2)'); // Family is now 2nd tab
                 if (familyTabBtn) {
                     window.switchTab('family', familyTabBtn);
                 }
@@ -1289,9 +1700,14 @@ function goToFamilyMember(personId, keepTab = true) {
 if (typeof window !== 'undefined') {
     window.updatePersonField = updatePersonField;
     window.updateNestedField = updateNestedField;
+    window.updateFamilyNestedField = updateFamilyNestedField;
     window.convertFromDateInput = convertFromDateInput;
     window.convertToDateInput = convertToDateInput;
     window.goToFamilyMember = goToFamilyMember;
+    window.openDatePicker = openDatePicker;
+    window.toggleDateFields = toggleDateFields;
+    window.applyDatePicker = applyDatePicker;
+    window.closeDatePickerModal = closeDatePickerModal;
 }
 
 export { 
@@ -1305,5 +1721,6 @@ export {
     calculateAge,
     formatDateWithAge,
     updatePersonField,
-    updateNestedField
+    updateNestedField,
+    updateFamilyNestedField
 };

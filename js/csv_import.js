@@ -1,6 +1,9 @@
 /**
+ * GEDCOM Family Tree Editor
+ * Copyright (c) 2024-2026 amalamalpm
+ * Licensed under MIT License - see LICENSE.txt
+ * 
  * CSV Import Module
- * Parses CSV files and converts to GEDCOM format
  */
 
 /**
